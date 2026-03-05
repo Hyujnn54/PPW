@@ -1,12 +1,14 @@
 """
 Account Service - Handles operations for stored account credentials
 """
-from datetime import datetime
-from typing import Optional, List, Tuple
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional, List, Tuple
 import uuid
 from db.database import db_manager
 from utils.encryption import EncryptionManager, PasswordGenerator
 from utils.logger import ActivityLogger, ActionType
+
+_now = lambda: datetime.now(timezone.utc)
 
 
 class AccountService:
@@ -34,6 +36,7 @@ class AccountService:
             strength_score, _ = PasswordGenerator.calculate_strength(password)
 
             account_id = str(uuid.uuid4())
+            now = _now()
             account_doc = {
                 'account_id': account_id,
                 'user_id': user_id,
@@ -47,11 +50,11 @@ class AccountService:
                 'tags': tags or [],
                 'favorite': False,
                 'strength_score': strength_score,
-                'last_password_change': datetime.utcnow(),
+                'last_password_change': now,
                 'password_expiry_days': None,
                 'two_factor_enabled': two_factor_enabled,
-                'created_at': datetime.utcnow(),
-                'updated_at': datetime.utcnow(),
+                'created_at': now,
+                'updated_at': now,
                 'last_accessed': None,
                 'access_count': 0
             }
@@ -84,7 +87,7 @@ class AccountService:
                 db_manager.accounts.update_one(
                     {'account_id': account_id},
                     {
-                        '$set': {'last_accessed': datetime.utcnow()},
+                        '$set': {'last_accessed': _now()},
                         '$inc': {'access_count': 1}
                     }
                 )
@@ -104,7 +107,7 @@ class AccountService:
     ) -> List[dict]:
         """Get all accounts for a user with optional filtering"""
         try:
-            query = {'user_id': user_id}
+            query: Dict[str, Any] = {'user_id': user_id}
 
             if category:
                 query['category'] = category
@@ -141,13 +144,13 @@ class AccountService:
             if not account:
                 return False, "Account not found"
 
-            update_data = {'updated_at': datetime.utcnow()}
+            update_data: Dict[str, Any] = {'updated_at': _now()}
 
             if 'password' in updates:
                 update_data['password_encrypted'] = EncryptionManager.encrypt_data(
                     updates['password'], encryption_key
                 )
-                update_data['last_password_change'] = datetime.utcnow()
+                update_data['last_password_change'] = _now()
                 strength_score, _ = PasswordGenerator.calculate_strength(updates['password'])
                 update_data['strength_score'] = strength_score
                 del updates['password']
@@ -271,7 +274,7 @@ class AccountService:
 
             db_manager.accounts.update_one(
                 {'account_id': account_id, 'user_id': user_id},
-                {'$set': {'favorite': new_status, 'updated_at': datetime.utcnow()}}
+                {'$set': {'favorite': new_status, 'updated_at': _now()}}
             )
 
             status = "added to" if new_status else "removed from"

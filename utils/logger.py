@@ -1,7 +1,7 @@
 """
 Activity logging utilities
 """
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 import uuid
 from db.database import db_manager
@@ -31,7 +31,7 @@ class ActivityLogger:
                 'details': details,
                 'ip_address': ip_address,
                 'device_info': device_info,
-                'timestamp': datetime.utcnow()
+                'timestamp': datetime.now(timezone.utc)
             }
 
             db_manager.activity_logs.insert_one(log_entry)
@@ -59,7 +59,7 @@ class ActivityLogger:
         """Get recent failed login attempts"""
         try:
             from datetime import timedelta
-            cutoff_time = datetime.utcnow() - timedelta(minutes=minutes)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=minutes)
 
             failed_logins = db_manager.activity_logs.count_documents({
                 'user_id': user_id,
@@ -77,7 +77,7 @@ class ActivityLogger:
         """Clear logs older than specified days"""
         try:
             from datetime import timedelta
-            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
 
             result = db_manager.activity_logs.delete_many({
                 'timestamp': {'$lt': cutoff_date}

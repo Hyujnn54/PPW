@@ -9,7 +9,6 @@ from utils.security import (
     IPValidator, SecureMemory
 )
 from utils.logger import ActivityLogger, ActionType
-from utils.email_service import send_welcome_email, send_login_alert
 
 
 class AuthController:
@@ -66,10 +65,6 @@ class AuthController:
                         details=f"New user registration: {username}"
                     )
 
-                    # Send welcome email (non-blocking — skip if no email)
-                    if email:
-                        send_welcome_email(username, email)
-
                     return True, "Registration successful", user_id
 
             return False, message, None
@@ -124,15 +119,6 @@ class AuthController:
                         'username': user['username'],
                         'email': user.get('email')
                     }
-
-                # Send login alert if user has email (non-blocking)
-                if user.get('email'):
-                    send_login_alert(
-                        username=user['username'],
-                        to_email=user['email'],
-                        timestamp=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-                        ip=ip_address,
-                    )
 
                 return True, message, session_data
             else:

@@ -22,7 +22,8 @@ class AccountController:
         url: Optional[str] = None,
         category: str = "Other",
         notes: Optional[str] = None,
-        tags: Optional[List[str]] = None
+        tags: Optional[List[str]] = None,
+        two_factor_enabled: bool = False
     ) -> Tuple[bool, str]:
         """Create a new account with validation."""
         try:
@@ -57,7 +58,8 @@ class AccountController:
                 url=url,
                 category=category,
                 notes=notes,
-                tags=tags
+                tags=tags,
+                two_factor_enabled=two_factor_enabled,
             )
         except Exception as e:
             return False, f"Error creating account: {str(e)}"

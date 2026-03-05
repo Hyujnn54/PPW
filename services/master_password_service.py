@@ -1,13 +1,15 @@
 """
 Master Password Service - Handles master password operations and authentication
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Tuple
 import uuid
 from db.database import db_manager
 from utils.encryption import EncryptionManager
 from utils.logger import ActivityLogger, ActionType
 from config import MAX_LOGIN_ATTEMPTS, LOCKOUT_DURATION
+
+_now = lambda: datetime.now(timezone.utc)
 
 
 class MasterPasswordService:
@@ -57,9 +59,9 @@ class MasterPasswordService:
                 'security_question_2': security_questions_hashed[1] if len(security_questions_hashed) > 1 else None,
                 'failed_attempts': 0,
                 'locked_until': None,
-                'password_changed_at': datetime.utcnow(),
-                'created_at': datetime.utcnow(),
-                'updated_at': datetime.utcnow(),
+                'password_changed_at': _now(),
+                'created_at': _now(),
+                'updated_at': _now(),
                 'last_login': None,
                 'email': email
             }
@@ -88,8 +90,8 @@ class MasterPasswordService:
                 return False, None, "Invalid username or password"
 
             if user.get('locked_until'):
-                if datetime.utcnow() < user['locked_until']:
-                    remaining = (user['locked_until'] - datetime.utcnow()).seconds // 60
+                if _now() < user['locked_until']:
+                    remaining = (user['locked_until'] - _now()).seconds // 60
                     return False, None, f"Account locked. Try again in {remaining} minutes"
                 else:
                     db_manager.master_password.update_one(
@@ -103,7 +105,7 @@ class MasterPasswordService:
                     {
                         '$set': {
                             'failed_attempts': 0,
-                            'last_login': datetime.utcnow(),
+                            'last_login': _now(),
                             'locked_until': None
                         }
                     }
@@ -121,7 +123,7 @@ class MasterPasswordService:
                 update_data = {'failed_attempts': failed_attempts}
 
                 if failed_attempts >= MAX_LOGIN_ATTEMPTS:
-                    update_data['locked_until'] = datetime.utcnow() + LOCKOUT_DURATION
+                    update_data['locked_until'] = _now() + LOCKOUT_DURATION
 
                 db_manager.master_password.update_one(
                     {'user_id': user['user_id']},
@@ -175,8 +177,8 @@ class MasterPasswordService:
                         'password_hash': new_password_hash,
                         'salt': new_salt,
                         'encryption_key_encrypted': new_encrypted_key,
-                        'password_changed_at': datetime.utcnow(),
-                        'updated_at': datetime.utcnow()
+                        'password_changed_at': _now(),
+                        'updated_at': _now()
                     }
                 }
             )

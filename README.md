@@ -1,192 +1,102 @@
 # PPW — Personal Password Manager 🔐
 
-> A secure, modern password manager built with Python and MongoDB Atlas.
-> Dark-themed desktop GUI · AES-256-GCM encryption · Zero-knowledge architecture
+> A secure, modern desktop password manager built with Python and MongoDB Atlas.
+> AES-256-GCM encryption · Cloud sync · Zero-knowledge · Browser extension
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![MongoDB Atlas](https://img.shields.io/badge/MongoDB-Atlas-green.svg)](https://www.mongodb.com/cloud/atlas)
-[![Version](https://img.shields.io/badge/version-1.0.0-purple.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.0-6c63ff.svg)](https://github.com/yourusername/PPW/releases)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![MongoDB Atlas](https://img.shields.io/badge/MongoDB-Atlas-00ED64.svg)](https://www.mongodb.com/cloud/atlas)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ---
 
-## Table of Contents
+## 📥 Download
 
-1. [Features](#-features)
-2. [How Users Install the App](#-how-users-install-the-app)
-3. [How the Database Works for Users](#-how-the-database-works-for-users)
-4. [Cloud vs Local Database — Security Analysis](#-cloud-vs-local-database--security-analysis)
-5. [Architecture](#-architecture)
-6. [Security](#-security)
-7. [Browser Extension](#-browser-extension-roadmap)
-8. [Development Setup](#-development-setup)
-9. [Releasing a New Version](#-releasing-a-new-version)
+**→ [Latest Release](https://github.com/yourusername/PPW/releases/latest)**
+
+| Platform | File |
+|----------|------|
+| Windows 10 / 11 | `PPW-PasswordManager.exe` |
+
+Just download and double-click. No Python, no installer, no setup.
 
 ---
 
-## ✨ Features
+## ✨ What it does
 
-| Feature | Details |
-|---------|---------|
-| 🖥 Modern dark GUI | Sidebar navigation, card-based vault, strength bars |
-| 🔐 AES-256-GCM encryption | Every password encrypted individually |
-| 🧠 Zero-knowledge | Your master password is **never stored** |
-| ☁️ MongoDB Atlas | Cloud sync — access from any device |
-| ⚡ Password generator | Configurable length, charset, live strength score |
-| 🛡 Security dashboard | Weak/old password detection, 2FA tracking |
-| 🔍 Smart search | Filter by title, username, category |
-| 📋 One-click copy | Copy password to clipboard instantly |
-| 🚪 Auto-lockout | 5 failed attempts → 30-minute lockout |
-| 📜 Activity logs | Full audit trail of every action |
+PPW stores all your passwords encrypted in the cloud so you can access them from anywhere.
+You remember **one strong master password** — PPW remembers everything else.
 
----
-
-## 📦 How Users Install the App
-
-### Option A — Download the Pre-built Executable *(recommended for end-users)*
-
-1. Go to the [Releases page](https://github.com/yourusername/PPW/releases)
-2. Download the file for your platform:
-   - **Windows**: `PPW-PasswordManager.exe`
-   - **macOS**: `PPW-PasswordManager.app`
-   - **Linux**: `PPW-PasswordManager`
-3. Double-click to run — **no Python, no setup, no database config**
-4. Click **Create a new account**, enter a username + email + master password
-5. Done — start saving passwords
-
-> **Users never see a database, a URI, or any configuration screen.**
-> The database connection is baked into the app by you before you build and release it.
+| | |
+|---|---|
+| 🔐 **AES-256-GCM encryption** | Every password encrypted individually before it leaves your device |
+| 🧠 **Zero-knowledge** | Your master password is never stored anywhere — not even hashed in a way that's reversable |
+| ☁️ **Cloud sync** | Powered by MongoDB Atlas — your vault is available on every device you sign in to |
+| ⚡ **Password generator** | Configurable length and charset with live strength scoring |
+| 🛡 **Security dashboard** | See weak passwords, old passwords, and 2FA coverage at a glance |
+| 🔍 **Search and filter** | Find any account instantly by title, username, or URL |
+| 📋 **One-click copy** | Copy passwords to clipboard without ever seeing them |
+| 🧩 **Browser extension** | Auto-fill login forms in Chrome, Firefox, and Edge |
+| 🚫 **Auto-lockout** | 5 failed login attempts locks the account for 30 minutes |
 
 ---
 
-### Option B — Install from Source *(developers / power users)*
+## 🚀 Getting started (users)
 
-```bash
-# 1. Clone
-git clone https://github.com/yourusername/PPW.git
-cd PPW
+1. **[Download the latest release](https://github.com/yourusername/PPW/releases/latest)**
+2. Double-click `PPW-PasswordManager.exe`
+3. Click **Create a new account**
+4. Choose a username and a strong master password *(12+ chars, mix of upper/lower/digits/symbols)*
+5. Start adding passwords — they're instantly encrypted and saved to the cloud
 
-# 2. Create virtual environment
-python -m venv venv
-venv\Scripts\activate        # Windows
-source venv/bin/activate     # macOS / Linux
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Configure (copy the template and fill in your MongoDB URI)
-cp .env.example .env
-# Edit .env — add MONGO_URI and SECRET_KEY
-
-# 5. Run
-python main.py               # launches GUI automatically
-python main.py --cli         # CLI fallback
-```
+> ⚠️ **Your master password cannot be recovered.** There is no "forgot password" — this is intentional. Write it down somewhere safe when you first set it up.
 
 ---
 
-## 🗄 How the Database Works
-
-### The simple version
-
-This works **exactly like any other app** — like Gmail, Spotify, or any website you've ever signed up for:
+## 🔒 How your passwords are protected
 
 ```
-You (developer)          Users
-─────────────            ─────────────────────────────────────
-Set up 1 MongoDB    →    Register an account in YOUR app
-Atlas cluster            ↓
-                         Their encrypted passwords get saved
-                         in YOUR database
-                         ↓
-                         They log in with their username +
-                         master password to access them
+Your master password   (only ever in your head — never stored anywhere)
+         │
+         ▼
+PBKDF2-HMAC-SHA256  ←─── unique random salt per account (100,000 iterations)
+         │
+         ▼
+Derived key  (exists only in RAM during your session, never written to disk)
+         │
+         ▼
+Decrypts your Encryption Key  (stored encrypted in the cloud)
+         │
+         ▼
+AES-256-GCM  decrypts each password individually
+         │
+         ▼
+Plaintext password  (shown in the app / copied to clipboard)
 ```
 
-- **You** set up ONE MongoDB Atlas cluster and put the URI in your `.env`
-- **Users** download the app, register, and use it — they never see or touch the database
-- It works exactly like Bitwarden, 1Password, or any other password manager
-
-### Do users need to configure anything?
-
-**No.** Users just:
-1. Download the app
-2. Register with username + email + master password
-3. Start saving passwords
-
-That's it. Zero database setup on their end.
-
-### What's stored in your database?
-
-```
-Collection: master_password
-  → username, email, hashed password, encrypted encryption key, salt
-
-Collection: accounts
-  → title, username, email, URL, category — all fine in plaintext
-  → password field → AES-256-GCM encrypted (only decryptable with their master password)
-
-Collection: activity_logs
-  → login history, actions, timestamps
-
-Collection: categories
-  → account organisation
-```
-
-**The critical part:** Even if someone steals your entire database,
-they cannot read a single password. Every password is encrypted with a key
-that is itself encrypted with the user's master password — which is **never stored**.
-
-### Setting up YOUR database (one-time, you do this, not users)
-
-1. Go to [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas) → **Try Free**
-2. Create a project → **Create Cluster** → choose **M0 Free Tier** (512 MB, always free)
-3. **Database Access** → Add Database User → username + password
-4. **Network Access** → Add IP Address → **Allow Access from Anywhere** (`0.0.0.0/0`)
-5. **Connect** → **Drivers** → copy the connection string
-6. Paste into your `.env` as `MONGO_URI`
-7. Ship the app — users never see any of this
+**What this means:** Even if someone broke into the database and downloaded everything,
+they would have a collection of encrypted blobs they can never read without your master password.
+Not even the developer can read your passwords.
 
 ---
 
-## 🔒 Security Model
+## 🌐 Browser Extension
 
-### Why cloud (MongoDB Atlas) is the right choice
+The extension lets you auto-fill login forms directly from your browser.
 
-You host one Atlas cluster. All user data goes into it — encrypted. Even if Atlas is breached, every password in the database is AES-256-GCM encrypted and **completely unreadable** without the user's master password, which is never stored anywhere.
+| Store | Cost |
+|-------|------|
+| Firefox Add-ons | ✅ Free |
+| Microsoft Edge Add-ons | ✅ Free |
+| Chrome Web Store | ⚠️ $5 one-time developer registration |
 
-```
-User's master password  (lives only in their head — never stored)
-        ↓
-PBKDF2-HMAC-SHA256  (100,000 iterations + unique salt per user)
-        ↓
-Derived key  (in memory only, discarded after session)
-        ↓
-Decrypts the user's Encryption Key  (stored encrypted in Atlas)
-        ↓
-AES-256-GCM decrypts each individual password
-        ↓
-Plaintext  (shown/copied, never written to disk)
-```
+**How it works:** The extension connects to the PPW desktop app running on your machine
+via `localhost:27227`. The desktop app must be open and unlocked. Passwords are
+decrypted locally — the extension never contacts any external server.
 
-### What this means in practice
-
-| Threat | Impact |
-|--------|--------|
-| Your Atlas cluster is breached | Attacker gets encrypted blobs — useless without every user's master password |
-| Someone clones the entire database | Same — all ciphertext, no keys |
-| Your `.env` file is stolen | Attacker can connect to Atlas but still can't read any passwords |
-| A user forgets their master password | Their data is permanently inaccessible — this is intentional |
-
-### Attack surface
-
-| Attack | Countermeasure |
-|--------|---------------|
-| Brute-force login | 5 attempts → 30 min lockout |
-| Weak master passwords | Min 12 chars, upper+lower+digit+symbol enforced |
-| Session hijacking | Cryptographically random tokens, 15-min timeout |
-| Rainbow tables | Unique per-user PBKDF2 salt |
-| Timing attacks | `secrets.compare_digest` for all comparisons |
+**Install during development:**
+1. Chrome: `chrome://extensions` → Developer mode → Load unpacked → select `extension/`
+2. Firefox: `about:debugging` → Load Temporary Add-on → select `extension/manifest.json`
 
 ---
 
@@ -194,149 +104,141 @@ Plaintext  (shown/copied, never written to disk)
 
 ```
 PPW/
-├── main.py                      ← entry point (GUI by default, --cli flag)
-├── gui_app.py                   ← PyQt6 dark-themed desktop application
-├── config.py                    ← settings loaded from .env
-├── version.py                   ← version string
-├── requirements.txt
-├── .env.example                 ← template — copy to .env and fill in
+├── main.py                       ← entry point
+├── gui_app.py                    ← PyQt6 dark-themed desktop UI
+├── config.py                     ← settings (reads from .env in dev, bundled in prod)
+├── build.py                      ← builds the release EXE
 │
-├── controllers/                 ← business logic layer
-│   ├── auth_controller.py       ← register, login, sessions, rate limiting
-│   ├── account_controller.py    ← CRUD, password generation, strength
-│   └── security_controller.py  ← audit logs, weak/old password reports
+├── controllers/                  ← business logic
+│   ├── auth_controller.py        ← register, login, sessions, rate limiting
+│   ├── account_controller.py     ← CRUD, password generation, strength analysis
+│   └── security_controller.py   ← audit logs, weak/old password reports
 │
-├── services/                    ← data access layer
+├── services/                     ← data access
 │   ├── master_password_service.py
 │   └── account_service.py
 │
 ├── db/
-│   ├── database.py              ← MongoDB connection manager
-│   └── schemas.py               ← collection schemas and indexes
+│   ├── database.py               ← MongoDB connection manager
+│   └── schemas.py                ← indexes and collection structure
 │
-└── utils/
-    ├── encryption.py            ← AES-256-GCM, PBKDF2, password generator
-    ├── logger.py                ← activity logging
-    └── security.py              ← validators, session manager, rate limiter
+├── utils/
+│   ├── encryption.py             ← AES-256-GCM, PBKDF2, password generator
+│   ├── extension_api.py          ← local HTTP server for browser extension
+│   ├── logger.py                 ← activity audit log
+│   ├── security.py               ← validators, session manager, rate limiter
+│   └── email_service.py          ← SMTP email (disabled by default)
+│
+├── extension/                    ← browser extension (Chrome/Firefox/Edge MV3)
+│
+└── .github/workflows/
+    └── release.yml               ← auto-build EXE on git tag push
 ```
 
-### GUI Screens
+### GUI screens
 
 ```
-App start
-  └─ Setup Wizard (first run only — enter MongoDB URI)
-       └─ Auth Screen (login / register)
-            └─ Vault Screen
-                 ├─ 🗄  Vault       — card list, search, add/view/copy/delete
-                 ├─ 🛡  Security    — stats grid, weak password list
-                 └─ ⚡  Generator   — configurable password generator
+Auth Screen  (login / register)
+      └─ Vault Screen
+           ├─ 🗄  Vault       — card list, search, filter, add/view/copy/delete
+           ├─ 🛡  Security    — strength stats, weak password list
+           └─ ⚡  Generator   — length slider, charset options, live strength bar
 ```
 
 ---
 
-## 🌐 Browser Extension
+## 💻 Development setup
 
-The `extension/` folder contains a full Chrome/Firefox/Edge MV3 extension.
+### Requirements
+- Python 3.11+
+- A free [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) account
 
-### Publishing cost
-
-| Store | Cost |
-|-------|------|
-| Firefox Add-ons | ✅ Free |
-| Microsoft Edge Add-ons | ✅ Free |
-| Chrome Web Store | ⚠️ $5 one-time registration |
-
-**Start with Firefox** (free, no waiting). Use the same zip for Edge (also free). Chrome requires a $5 one-time developer fee — not per extension, not recurring.
-
-### How it connects
-
-```
-Extension popup → http://127.0.0.1:27227 → PPW desktop app (when open + unlocked)
-```
-
-The desktop app runs a local API server. The extension talks only to your own machine — never to any external server. See `extension/README.md` for full details.
-
----
-
-## 💻 Development Setup
+### Steps
 
 ```bash
-# Install all dependencies
+# 1. Clone
+git clone https://github.com/yourusername/PPW.git
+cd PPW
+
+# 2. Virtual environment
+python -m venv venv
+venv\Scripts\activate        # Windows
+source venv/bin/activate     # macOS / Linux
+
+# 3. Dependencies
 pip install -r requirements.txt
 
-# Run the app
-python main.py
+# 4. Configure
+cp .env.example .env
+# Open .env and fill in MONGO_URI and SECRET_KEY
 
-# Run CLI mode
-python main.py --cli
+# 5. Run
+python main.py
 ```
 
-### Environment variables (`.env`)
+### `.env` reference
 
 ```env
 # Required
-MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/?appName=PPW
+MONGO_URI=mongodb+srv://user:password@cluster.mongodb.net/?appName=PPW
 
-# Optional — defaults work for development
-DATABASE_NAME=password_manager
-SECRET_KEY=generate_with__python -c "import secrets; print(secrets.token_hex(32))"
+# What each key does
+DATABASE_NAME=password_manager        # name of the MongoDB database
+SECRET_KEY=<32-byte hex string>       # signs session tokens — keep secret
+```
+
+Generate a `SECRET_KEY`:
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
 ---
 
-## 🚀 Releasing a New Version
+## 📦 Releasing a new version
 
-### 1. Update the version
+### Automated (recommended)
 
-```python
-# version.py
-__version__ = "1.1.0"
-```
-
-### 2. Update the changelog
-
-Edit `CHANGELOG.md` — add a new `## [1.1.0] - YYYY-MM-DD` section.
-
-### 3. Commit and tag
+1. Update `version.py` and add a section to `CHANGELOG.md`
+2. Commit, tag, push:
 
 ```bash
 git add -A
 git commit -m "chore: release v1.1.0"
-git tag -a v1.1.0 -m "Release v1.1.0"
+git tag v1.1.0
 git push origin main --tags
 ```
 
-### 4. Build the executable
+GitHub Actions automatically:
+- Builds `PPW-PasswordManager.exe` with your secrets baked in
+- Creates a GitHub Release
+- Attaches the EXE for users to download
 
-```bash
-pip install pyinstaller
+### GitHub Secrets required (one-time setup)
 
-# Windows
-pyinstaller --name PPW-PasswordManager --onefile --windowed main.py
+Go to your repo → **Settings → Secrets and variables → Actions → New repository secret**:
 
-# macOS
-pyinstaller --name "PPW Password Manager" --onefile --windowed main.py
+| Secret | Value |
+|--------|-------|
+| `MONGO_URI` | Your Atlas connection string |
+| `SECRET_KEY` | Output of `python -c "import secrets; print(secrets.token_hex(32))"` |
 
-# Linux
-pyinstaller --name ppw-password-manager --onefile main.py
-```
+---
 
-Output is in `dist/`.
+## 🗄 Database
 
-### 5. Create the GitHub Release
+PPW uses **one shared MongoDB Atlas cluster** that you own. Users never see or configure the database — they just register an account like any other app.
 
-- Go to **Releases → Draft a new release**
-- Choose tag `v1.1.0`
-- Title: `PPW v1.1.0 — <short description>`
-- Body: paste from `CHANGELOG.md`
-- Upload the `dist/` executables
-- Publish
+**Free tier (M0):** 512 MB storage — enough for tens of thousands of users.
 
-> Users then just download the `.exe` / `.app` / binary and run it.
-> No Python, no pip, no terminal required.
+**Atlas setup (one-time):**
+1. [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas) → Try Free
+2. Create cluster → **M0 Free**
+3. Database Access → Add User
+4. Network Access → Allow from anywhere (`0.0.0.0/0`)
+5. Connect → Drivers → copy URI → paste into `.env`
 
 ---
 
 ## 📄 License
 
-MIT — see [LICENSE](LICENSE)
+[MIT](LICENSE) — free to use, modify, and distribute.

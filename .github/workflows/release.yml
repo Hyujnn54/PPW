@@ -1,0 +1,79 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build EXE
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+        run: python build.py
+
+      - name: Verify EXE
+        run: |
+          $exe = "dist\PPW-PasswordManager.exe"
+          if (!(Test-Path $exe)) { Write-Error "EXE not found!"; exit 1 }
+          $mb = [math]::Round((Get-Item $exe).Length / 1MB, 1)
+          Write-Host "✓ Built: $exe ($mb MB)"
+
+      - name: Get tag name
+        id: tag
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if (-not $tag -or $tag -eq "main") { $tag = "v1.0.0" }
+          echo "name=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Read changelog entry
+        id: changelog
+        run: |
+          $version = "${{ steps.tag.outputs.name }}".TrimStart('v')
+          $content = Get-Content CHANGELOG.md -Raw
+          # Extract the section for this version
+          if ($content -match "(?s)## \[$version\][^\n]*\n(.+?)(?=\n## \[|\z)") {
+            $section = $matches[1].Trim()
+          } else {
+            $section = "See CHANGELOG.md for details."
+          }
+          # Write to file to avoid multiline env var issues
+          $section | Out-File -FilePath release_body.txt -Encoding utf8
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: "PPW ${{ steps.tag.outputs.name }}"
+          draft: false
+          prerelease: false
+          body_path: release_body.txt
+          files: dist/PPW-PasswordManager.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPW-Windows-${{ steps.tag.outputs.name }}
+          path: dist/PPW-PasswordManager.exe
+          retention-days: 90
+

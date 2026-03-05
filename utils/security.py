@@ -5,7 +5,7 @@ import re
 import secrets
 import string
 from typing import Tuple, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import hashlib
 
 
@@ -99,8 +99,11 @@ class SecurityValidator:
         # Trim to max length
         text = text[:max_length]
 
-        # Remove control characters except newline and tab
-        text = ''.join(char for char in text if char == '\n' or char == '\t' or not char.iscntrl())
+        # Remove control characters (ord < 32) except newline (10) and tab (9)
+        text = ''.join(
+            char for char in text
+            if ord(char) >= 32 or char in ('\n', '\t')
+        )
 
         return text.strip()
 
@@ -114,15 +117,15 @@ class SessionManager:
     def create_session(user_id: str, timeout_minutes: int = 15) -> str:
         """Create a new secure session"""
         session_token = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(minutes=timeout_minutes)
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(minutes=timeout_minutes)
 
         SessionManager._sessions[session_token] = {
             'user_id': user_id,
             'expires_at': expires_at,
-            'created_at': datetime.utcnow(),
-            'last_activity': datetime.utcnow()
+            'created_at': now,
+            'last_activity': now,
         }
-
         return session_token
 
     @staticmethod
@@ -133,14 +136,11 @@ class SessionManager:
 
         session = SessionManager._sessions[session_token]
 
-        # Check expiration
-        if datetime.utcnow() > session['expires_at']:
+        if datetime.now(timezone.utc) > session['expires_at']:
             SessionManager.destroy_session(session_token)
             return None
 
-        # Update last activity
-        session['last_activity'] = datetime.utcnow()
-
+        session['last_activity'] = datetime.now(timezone.utc)
         return session['user_id']
 
     @staticmethod
@@ -148,7 +148,7 @@ class SessionManager:
         """Extend session timeout"""
         if session_token in SessionManager._sessions:
             SessionManager._sessions[session_token]['expires_at'] = \
-                datetime.utcnow() + timedelta(minutes=timeout_minutes)
+                datetime.now(timezone.utc) + timedelta(minutes=timeout_minutes)
 
     @staticmethod
     def destroy_session(session_token: str):
@@ -159,10 +159,9 @@ class SessionManager:
     @staticmethod
     def cleanup_expired_sessions():
         """Remove expired sessions"""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expired = [token for token, session in SessionManager._sessions.items()
-                  if now > session['expires_at']]
-
+                   if now > session['expires_at']]
         for token in expired:
             del SessionManager._sessions[token]
 
@@ -181,7 +180,7 @@ class RateLimiter:
         Check if identifier is within rate limit
         Returns: (is_allowed, remaining_attempts)
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         window_start = now - timedelta(minutes=window_minutes)
 
         if identifier not in RateLimiter._attempts:
@@ -206,7 +205,7 @@ class RateLimiter:
         if identifier not in RateLimiter._attempts:
             RateLimiter._attempts[identifier] = []
 
-        RateLimiter._attempts[identifier].append(datetime.utcnow())
+        RateLimiter._attempts[identifier].append(datetime.now(timezone.utc))
 
     @staticmethod
     def reset_attempts(identifier: str):
@@ -293,7 +292,7 @@ class SecureMemory:
     """Utilities for secure memory handling"""
 
     @staticmethod
-    def secure_delete(data: any):
+    def secure_delete(data: object):
         """Securely delete sensitive data from memory"""
         if isinstance(data, str):
             # Overwrite string data
