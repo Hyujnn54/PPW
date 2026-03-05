@@ -20,6 +20,14 @@ def main():
             print(f"GUI error: {e}\nFalling back to CLI.")
 
     # ── CLI fallback ──────────────────────────────────────────────
+    import os
+    if not os.getenv("MONGO_URI"):
+        sys.exit(
+            "\n  ✗  MONGO_URI is not set.\n"
+            "  Copy .env.example to .env and fill in your MongoDB Atlas URI.\n"
+            "  See README.md → Development Setup for instructions.\n"
+        )
+
     from db.database import db_manager
     from services.master_password_service import MasterPasswordService
     from services.account_service import AccountService

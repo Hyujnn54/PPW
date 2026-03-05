@@ -1219,15 +1219,29 @@ class MainWindow(QMainWindow):
     def _connect_and_start(self):
         """Connect to the database silently, then show the auth screen.
         The MONGO_URI comes from the developer's .env — users never see it."""
+        import os
+        if not os.getenv("MONGO_URI"):
+            self._show_db_error(
+                "MONGO_URI is not configured.",
+                "Add your MongoDB Atlas connection string to the .env file.\n"
+                "See README.md → Development Setup for instructions."
+            )
+            return
+
         if not db_manager.is_connected:
             ok = db_manager.connect()
             if not ok:
-                self._show_db_error()
+                self._show_db_error(
+                    "Cannot connect to the server.",
+                    "PPW could not reach its database.\n"
+                    "Check your internet connection and try again."
+                )
                 return
             db_manager.initialize_collections()
         self._init_auth()
 
-    def _show_db_error(self):
+    def _show_db_error(self, title: str = "Cannot connect to the server",
+                       message: str = "Check your internet connection and try again."):
         """Show a clean error screen if the database can't be reached."""
         w = QWidget()
         vl = QVBoxLayout(w)
@@ -1240,19 +1254,16 @@ class MainWindow(QMainWindow):
         ico.setStyleSheet("font-size:40px; background:transparent;")
         cl.addWidget(ico)
 
-        title = QLabel("Cannot connect to the server")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet(f"font-size:18px; font-weight:700; color:{TEXT};")
-        cl.addWidget(title)
+        title_lbl = QLabel(title)
+        title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_lbl.setStyleSheet(f"font-size:18px; font-weight:700; color:{TEXT};")
+        cl.addWidget(title_lbl)
 
-        msg = QLabel(
-            "PPW could not reach its database.\n"
-            "Please check your internet connection and try again."
-        )
-        msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        msg.setWordWrap(True)
-        msg.setStyleSheet(f"color:{TEXT_MUTED}; font-size:13px;")
-        cl.addWidget(msg)
+        msg_lbl = QLabel(message)
+        msg_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        msg_lbl.setWordWrap(True)
+        msg_lbl.setStyleSheet(f"color:{TEXT_MUTED}; font-size:13px;")
+        cl.addWidget(msg_lbl)
 
         retry = QPushButton("Retry")
         retry.setFixedHeight(42)

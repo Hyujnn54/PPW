@@ -35,10 +35,12 @@ PBKDF2_ITERATIONS        = 100_000
 ENCRYPTION_ALGORITHM     = "AES-256-GCM"
 
 # ── Developer guard ────────────────────────────────────────────────────────────
-# Raise at import time so you notice immediately during development.
-# In production builds the .env is baked in, so this never triggers for users.
+# Log a clear warning if MONGO_URI is missing so the developer knows immediately.
+# The GUI will show a "Cannot connect" screen; the CLI will exit with a clear message.
+# We do NOT raise here — a hard raise crashes the import chain before the GUI can start.
+import logging as _logging
 if not MONGO_URI:
-    raise EnvironmentError(
+    _logging.warning(
         "\n\n  MONGO_URI is not set!\n"
         "  Create a .env file (copy .env.example) and add your MongoDB Atlas URI.\n"
         "  This is YOUR database — users never configure this.\n"
