@@ -1,11 +1,13 @@
 """
 PPW build script.
+Produces: dist/PPW-Setup.exe  (Inno Setup installer)
+          dist/PPW-PasswordManager.exe (raw exe, also inside the installer)
 
-How secrets are baked in:
-  1. Reads MONGO_URI from env (GitHub Actions secrets) or .env
-  2. Writes config_frozen.py with the URI hardcoded inside
-  3. PyInstaller bundles it - the EXE imports config_frozen instead of config
-  4. config_frozen.py is deleted after the build
+Steps:
+  1. Write config_frozen.py with MONGO_URI baked in
+  2. Run PyInstaller -> dist/PPW-PasswordManager.exe
+  3. Run Inno Setup  -> dist/PPW-Setup.exe
+  4. Delete config_frozen.py
 """
 import os
 import sys
@@ -17,6 +19,15 @@ DIST   = ROOT / "dist"
 BUILD  = ROOT / "build_tmp"
 SPEC   = ROOT / "ppw.spec"
 FROZEN = ROOT / "config_frozen.py"
+ISS    = ROOT / "installer.iss"
+
+# Inno Setup compiler locations (GitHub Actions + common local installs)
+ISCC_CANDIDATES = [
+    r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+    r"C:\Program Files\Inno Setup 6\ISCC.exe",
+    r"C:\Program Files (x86)\Inno Setup 5\ISCC.exe",
+    "ISCC.exe",   # if on PATH
+]
 
 
 def get_secret(name):
@@ -78,7 +89,10 @@ def delete_frozen_config():
 
 def write_spec():
     has_icon = (ROOT / "extension" / "icons" / "icon.ico").exists()
-    icon_line = "    icon='" + str(ROOT / 'extension' / 'icons' / 'icon.ico') + "',\n" if has_icon else "    icon=None,\n"
+    icon_line = (
+        "    icon='" + str(ROOT / "extension" / "icons" / "icon.ico").replace("\\", "\\\\") + "',\n"
+        if has_icon else "    icon=None,\n"
+    )
     spec_text = (
         "block_cipher = None\n"
         "a = Analysis(\n"
@@ -113,7 +127,7 @@ def write_spec():
     print("[OK] ppw.spec written")
 
 
-def build():
+def build_exe():
     print("-- Installing PyInstaller --")
     subprocess.check_call(
         [sys.executable, "-m", "pip", "install", "pyinstaller>=6.0", "-q"]
@@ -128,19 +142,56 @@ def build():
     ])
     exe = DIST / "PPW-PasswordManager.exe"
     if not exe.exists():
-        exe = DIST / "PPW-PasswordManager"
-    if exe.exists():
-        mb = round(exe.stat().st_size / 1_048_576, 1)
-        print("[OK] " + str(exe) + " (" + str(mb) + " MB)")
+        sys.exit("[ERROR] EXE not found after PyInstaller")
+    mb = round(exe.stat().st_size / 1_048_576, 1)
+    print("[OK] EXE: " + str(exe) + " (" + str(mb) + " MB)")
+
+
+def build_installer():
+    # Install Inno Setup on the runner if not present
+    iscc = None
+    for candidate in ISCC_CANDIDATES:
+        if Path(candidate).exists() or candidate == "ISCC.exe":
+            try:
+                subprocess.check_call(
+                    [candidate, "/?"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                iscc = candidate
+                break
+            except (FileNotFoundError, subprocess.CalledProcessError):
+                continue
+
+    if iscc is None:
+        print("-- Inno Setup not found, installing via choco --")
+        try:
+            subprocess.check_call(
+                ["choco", "install", "innosetup", "-y", "--no-progress"],
+                stdout=subprocess.DEVNULL,
+            )
+            iscc = r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+        except Exception as e:
+            print("[WARN] Could not install Inno Setup: " + str(e))
+            print("[WARN] Skipping installer build - only raw EXE will be released")
+            return
+
+    print("-- Building installer with Inno Setup --")
+    subprocess.check_call([iscc, str(ISS)])
+    setup = DIST / "PPW-Setup.exe"
+    if setup.exists():
+        mb = round(setup.stat().st_size / 1_048_576, 1)
+        print("[OK] Installer: " + str(setup) + " (" + str(mb) + " MB)")
     else:
-        print("[ERROR] EXE not found")
+        print("[WARN] PPW-Setup.exe not found after Inno Setup")
 
 
 if __name__ == "__main__":
     try:
         write_frozen_config()
         write_spec()
-        build()
+        build_exe()
+        build_installer()
     finally:
         delete_frozen_config()
 
