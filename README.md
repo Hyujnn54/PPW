@@ -1,244 +1,147 @@
 # PPW — Personal Password Manager 🔐
 
-> A secure, modern desktop password manager built with Python and MongoDB Atlas.
-> AES-256-GCM encryption · Cloud sync · Zero-knowledge · Browser extension
+> One master password. Every password, safe and synced.
 
-[![Version](https://img.shields.io/badge/version-1.0.0-6c63ff.svg)](https://github.com/yourusername/PPW/releases)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![MongoDB Atlas](https://img.shields.io/badge/MongoDB-Atlas-00ED64.svg)](https://www.mongodb.com/cloud/atlas)
+[![Version](https://img.shields.io/badge/version-1.0.0-6c63ff.svg)](https://github.com/Hyujnn54/PPW/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ---
 
-## 📥 Download
+## Download
 
-**→ [Latest Release](https://github.com/yourusername/PPW/releases/latest)**
+**[→ Download PPW for Windows](https://github.com/Hyujnn54/PPW/releases/latest)**
 
-| Platform | File |
-|----------|------|
-| Windows 10 / 11 | `PPW-PasswordManager.exe` |
-
-Just download and double-click. No Python, no installer, no setup.
+Run `PPW-Setup.exe` — installs like any normal Windows app with a Start Menu shortcut and uninstaller.
 
 ---
 
-## ✨ What it does
+## What is PPW?
 
-PPW stores all your passwords encrypted in the cloud so you can access them from anywhere.
-You remember **one strong master password** — PPW remembers everything else.
+PPW is a password manager. Instead of reusing the same password everywhere (which is dangerous), or writing passwords on sticky notes (also dangerous), PPW stores all your passwords in one secure, encrypted place.
 
-| | |
-|---|---|
-| 🔐 **AES-256-GCM encryption** | Every password encrypted individually before it leaves your device |
-| 🧠 **Zero-knowledge** | Your master password is never stored anywhere — not even hashed in a way that's reversable |
-| ☁️ **Cloud sync** | Powered by MongoDB Atlas — your vault is available on every device you sign in to |
-| ⚡ **Password generator** | Configurable length and charset with live strength scoring |
-| 🛡 **Security dashboard** | See weak passwords, old passwords, and 2FA coverage at a glance |
-| 🔍 **Search and filter** | Find any account instantly by title, username, or URL |
-| 📋 **One-click copy** | Copy passwords to clipboard without ever seeing them |
-| 🧩 **Browser extension** | Auto-fill login forms in Chrome, Firefox, and Edge |
-| 🚫 **Auto-lockout** | 5 failed login attempts locks the account for 30 minutes |
+You only need to remember **one strong master password**. PPW handles everything else.
 
 ---
 
-## 🚀 Getting started (users)
+## Getting started
 
-1. **[Download the latest release](https://github.com/yourusername/PPW/releases/latest)**
-2. Double-click `PPW-PasswordManager.exe`
-3. Click **Create a new account**
-4. Choose a username and a strong master password *(12+ chars, mix of upper/lower/digits/symbols)*
-5. Start adding passwords — they're instantly encrypted and saved to the cloud
+### 1. Install
+Download and run `PPW-Setup.exe`. Click through the installer — it takes about 10 seconds.
 
-> ⚠️ **Your master password cannot be recovered.** There is no "forgot password" — this is intentional. Write it down somewhere safe when you first set it up.
+### 2. Create your account
+When the app opens, click **Create a new account** and fill in:
+- **Username** — whatever name you want to use
+- **Email** — for account recovery in the future
+- **Master password** — this is the one password you must remember. Make it strong: at least 12 characters with a mix of uppercase, lowercase, numbers, and symbols
 
----
+> ⚠️ **Write your master password down and keep it somewhere safe.** If you forget it, your vault cannot be recovered. This is by design — it means nobody else can recover it either.
 
-## 🔒 How your passwords are protected
+### 3. Add your passwords
+Click the **+** button, enter the site name, your username or email for that site, and the password. Hit **Save** — it's encrypted and stored instantly.
 
-```
-Your master password   (only ever in your head — never stored anywhere)
-         │
-         ▼
-PBKDF2-HMAC-SHA256  ←─── unique random salt per account (100,000 iterations)
-         │
-         ▼
-Derived key  (exists only in RAM during your session, never written to disk)
-         │
-         ▼
-Decrypts your Encryption Key  (stored encrypted in the cloud)
-         │
-         ▼
-AES-256-GCM  decrypts each password individually
-         │
-         ▼
-Plaintext password  (shown in the app / copied to clipboard)
-```
-
-**What this means:** Even if someone broke into the database and downloaded everything,
-they would have a collection of encrypted blobs they can never read without your master password.
-Not even the developer can read your passwords.
+That's it. You're set up.
 
 ---
 
-## 🌐 Browser Extension
+## Your passwords are safe — here's why
 
-The extension lets you auto-fill login forms directly from your browser.
+This is the most important thing to understand about PPW.
 
-| Store | Cost |
-|-------|------|
-| Firefox Add-ons | ✅ Free |
-| Microsoft Edge Add-ons | ✅ Free |
-| Chrome Web Store | ⚠️ $5 one-time developer registration |
+### Nobody can read your passwords — not even us
 
-**How it works:** The extension connects to the PPW desktop app running on your machine
-via `localhost:27227`. The desktop app must be open and unlocked. Passwords are
-decrypted locally — the extension never contacts any external server.
+When you save a password, PPW **encrypts it on your device** before sending anything to the cloud. What gets stored is scrambled, unreadable data — not your actual password.
 
-**Install during development:**
-1. Chrome: `chrome://extensions` → Developer mode → Load unpacked → select `extension/`
-2. Firefox: `about:debugging` → Load Temporary Add-on → select `extension/manifest.json`
+To unscramble it, you need your master password. Since your master password is never stored anywhere (not on your device, not in the cloud, nowhere), there is nothing to steal.
+
+### What happens when you save a password
+
+```
+You type your password
+        ↓
+PPW scrambles it using your master password as the key
+        ↓
+Only the scrambled version is saved to the cloud
+        ↓
+When you need it, PPW unscrambles it on your device
+```
+
+Your master password never leaves your device. It's used as a key to lock and unlock your data — and then it's gone from memory.
+
+### What if someone breaks into the database?
+
+They would get a collection of scrambled data that is mathematically impossible to read without your master password. It would look something like this:
+
+```
+gAAAAABh3xK9mN2pQr7sT1uVwXyZ...  ← this is what a stolen password looks like
+```
+
+Completely useless without the key — which only you have.
+
+### The encryption behind it
+
+PPW uses **AES-256** — the same encryption standard used by banks, governments, and the military. Every password is encrypted individually, so even if one were somehow compromised, the rest remain safe.
+
+Your master password itself is never stored. Instead, PPW puts it through **100,000 rounds of processing** with a unique random value specific to your account before using it as an encryption key. This makes it practically impossible to guess through brute force.
 
 ---
 
-## 🏗 Architecture
+## Features
 
-```
-PPW/
-├── main.py                       ← entry point
-├── gui_app.py                    ← PyQt6 dark-themed desktop UI
-├── config.py                     ← settings (reads from .env in dev, bundled in prod)
-├── build.py                      ← builds the release EXE
-│
-├── controllers/                  ← business logic
-│   ├── auth_controller.py        ← register, login, sessions, rate limiting
-│   ├── account_controller.py     ← CRUD, password generation, strength analysis
-│   └── security_controller.py   ← audit logs, weak/old password reports
-│
-├── services/                     ← data access
-│   ├── master_password_service.py
-│   └── account_service.py
-│
-├── db/
-│   ├── database.py               ← MongoDB connection manager
-│   └── schemas.py                ← indexes and collection structure
-│
-├── utils/
-│   ├── encryption.py             ← AES-256-GCM, PBKDF2, password generator
-│   ├── extension_api.py          ← local HTTP server for browser extension
-│   ├── logger.py                 ← activity audit log
-│   ├── security.py               ← validators, session manager, rate limiter
-│   └── email_service.py          ← SMTP email (disabled by default)
-│
-├── extension/                    ← browser extension (Chrome/Firefox/Edge MV3)
-│
-└── .github/workflows/
-    └── release.yml               ← auto-build EXE on git tag push
-```
+### Vault
+Your password list. Search, filter by category, and manage all your saved accounts in one place.
 
-### GUI screens
+- **View** — reveal a password when you need it
+- **Copy** — copy to clipboard in one click without the password appearing on screen
+- **Edit** — update saved details at any time
+- **Delete** — permanently remove an entry
 
-```
-Auth Screen  (login / register)
-      └─ Vault Screen
-           ├─ 🗄  Vault       — card list, search, filter, add/view/copy/delete
-           ├─ 🛡  Security    — strength stats, weak password list
-           └─ ⚡  Generator   — length slider, charset options, live strength bar
-```
+### Password Generator
+Can't think of a strong password? Go to the **Generator** tab:
+- Set the length (8 to 64 characters)
+- Choose whether to include uppercase, lowercase, numbers, and symbols
+- Click **Copy** — paste it wherever you need it
+
+The generator is also built into the Add/Edit form so you can create and save in one step.
+
+### Security Dashboard
+The **Security** tab gives you an overview of your vault health:
+- Which passwords are weak or too short
+- Which accounts don't have two-factor authentication enabled
+- Your overall security score
+
+### Cloud Sync
+Your vault is stored securely in the cloud. Log in on any Windows device with your username and master password and all your passwords are there, up to date.
+
+### Auto-lockout
+After 5 wrong master password attempts, your account locks for 30 minutes. This stops anyone from trying to guess their way in.
+
+### Browser Extension
+PPW has a browser extension for Chrome, Firefox, and Edge that lets you fill in login forms without opening the app.
+
+> The extension only works while the PPW desktop app is open and unlocked on your computer. It never connects to the internet directly — it only talks to the app on your own machine.
 
 ---
 
-## 💻 Development setup
+## Frequently asked questions
 
-### Requirements
-- Python 3.11+
-- A free [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) account
+**Can I use PPW on multiple computers?**
+Yes. Install PPW on any Windows computer, log in with the same username and master password, and your vault is there.
 
-### Steps
+**What if I forget my master password?**
+Your data cannot be recovered without it. This is intentional — it means no one else can get into your vault either, even if they contact support. Write it down somewhere safe when you create your account.
 
-```bash
-# 1. Clone
-git clone https://github.com/yourusername/PPW.git
-cd PPW
+**Is my data safe if PPW gets hacked?**
+Yes. Everything stored is encrypted. Attackers would get scrambled data that is useless without your master password, which is never stored anywhere.
 
-# 2. Virtual environment
-python -m venv venv
-venv\Scripts\activate        # Windows
-source venv/bin/activate     # macOS / Linux
+**Does PPW ever see my passwords?**
+No. Encryption and decryption happen entirely on your device. The only thing stored in the cloud is the already-encrypted version.
 
-# 3. Dependencies
-pip install -r requirements.txt
-
-# 4. Configure
-cp .env.example .env
-# Open .env and fill in MONGO_URI and SECRET_KEY
-
-# 5. Run
-python main.py
-```
-
-### `.env` reference
-
-```env
-# Required
-MONGO_URI=mongodb+srv://user:password@cluster.mongodb.net/?appName=PPW
-
-# What each key does
-DATABASE_NAME=password_manager        # name of the MongoDB database
-SECRET_KEY=<32-byte hex string>       # signs session tokens — keep secret
-```
-
-Generate a `SECRET_KEY`:
-```bash
-python -c "import secrets; print(secrets.token_hex(32))"
-```
+**What does the browser extension do?**
+It lets you fill in login forms from your browser without copying and pasting. It reads your vault through the PPW desktop app — nothing is sent to any website or server.
 
 ---
 
-## 📦 Releasing a new version
+## License
 
-### Automated (recommended)
+[MIT](LICENSE) — free to use and share.
 
-1. Update `version.py` and add a section to `CHANGELOG.md`
-2. Commit, tag, push:
-
-```bash
-git add -A
-git commit -m "chore: release v1.1.0"
-git tag v1.1.0
-git push origin main --tags
-```
-
-GitHub Actions automatically:
-- Builds `PPW-PasswordManager.exe` with your secrets baked in
-- Creates a GitHub Release
-- Attaches the EXE for users to download
-
-### GitHub Secrets required (one-time setup)
-
-Go to your repo → **Settings → Secrets and variables → Actions → New repository secret**:
-
-| Secret | Value |
-|--------|-------|
-| `MONGO_URI` | Your Atlas connection string |
-| `SECRET_KEY` | Output of `python -c "import secrets; print(secrets.token_hex(32))"` |
-
----
-
-## 🗄 Database
-
-PPW uses **one shared MongoDB Atlas cluster** that you own. Users never see or configure the database — they just register an account like any other app.
-
-**Free tier (M0):** 512 MB storage — enough for tens of thousands of users.
-
-**Atlas setup (one-time):**
-1. [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas) → Try Free
-2. Create cluster → **M0 Free**
-3. Database Access → Add User
-4. Network Access → Allow from anywhere (`0.0.0.0/0`)
-5. Connect → Drivers → copy URI → paste into `.env`
-
----
-
-## 📄 License
-
-[MIT](LICENSE) — free to use, modify, and distribute.

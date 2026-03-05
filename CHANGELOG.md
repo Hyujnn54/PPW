@@ -27,8 +27,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) · [Semantic Ve
   - Vault popup, auto-fill, password generator, save-offer
   - Connects to desktop app via `localhost:27227` — never to any external server
 - **Automated release pipeline** via GitHub Actions
-  - Push a tag → builds `PPW-PasswordManager.exe` → creates GitHub Release automatically
-  - Secrets (MONGO_URI, SECRET_KEY) baked into EXE at build time, never committed
+  - Push a tag → builds `PPW-Setup.exe` installer + `PPW-PasswordManager.exe` → creates GitHub Release automatically
+  - MONGO_URI baked into EXE at build time via PyInstaller runtime hook, never committed
 
 #### Security hardening
 - 5 failed login attempts → 30-minute account lockout
