@@ -1,0 +1,218 @@
+# ============================================
+# SECRETS AND SENSITIVE DATA - DO NOT COMMIT
+# ============================================
+
+# Environment variables (contains MongoDB URI, secrets)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Configuration files with secrets
+config.local.py
+secrets.py
+credentials.json
+*.pem
+*.key
+*.cert
+
+# MongoDB connection strings
+connection_string.txt
+
+# Session data
+sessions/
+session_*.json
+
+# API keys and tokens
+.api_keys
+tokens/
+
+# ============================================
+# PYTHON
+# ============================================
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# ============================================
+# VIRTUAL ENVIRONMENTS
+# ============================================
+
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# ============================================
+# IDEs
+# ============================================
+
+# PyCharm
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.vim/
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================
+# DATABASES & BACKUPS
+# ============================================
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Database backups
+backups/
+exports/
+dumps/
+*.sql
+*.dump
+
+# ============================================
+# LOGS
+# ============================================
+
+*.log
+logs/
+log/
+*.log.*
+
+# ============================================
+# OS FILES
+# ============================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+.directory
+.Trash-*
+
+# ============================================
+# DEPLOYMENT & RELEASES
+# ============================================
+
+# Build artifacts
+dist/
+build/
+*.exe
+*.app
+*.dmg
+*.pkg
+*.deb
+*.rpm
+
+# Release files (keep in separate repo or releases)
+releases/
+release_notes/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# ============================================
+# PROJECT SPECIFIC
+# ============================================
+
+# Test data
+test_accounts.json
+test_data/
+
+# User data (if stored locally)
+user_data/
+*.encrypted
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.bak
+*.swp
+
+# PyQt cache
+.qmake.stash
+*.pro.user
+*.autosave
+
+# ============================================
+# SECURITY NOTES
+# ============================================
+# This file prevents accidentally committing:
+# - MongoDB connection strings
+# - API keys and tokens
+# - User credentials
+# - Session data
+# - Private keys and certificates
+# - Database backups containing sensitive data
+
