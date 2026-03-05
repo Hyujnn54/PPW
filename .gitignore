@@ -11,6 +11,7 @@ build_tmp/
 dist/
 _bundled_config.py
 config_frozen.py
+pyi_rth_ppw.py
 .env.local
 .env.production
 .env.*.local
