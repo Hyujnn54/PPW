@@ -1201,94 +1201,6 @@ class VaultScreen(QWidget):
 #  Setup Wizard  (first-run MongoDB URI configuration)
 # ═════════════════════════════════════════════════════════════════════════════
 
-class SetupWizard(QWidget):
-    finished = pyqtSignal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._build()
-
-    def _build(self):
-        vl = QVBoxLayout(self)
-        vl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        card = QFrame(); card.setProperty("card","true"); card.setFixedWidth(480)
-        cl = QVBoxLayout(card); cl.setContentsMargins(40,40,40,40); cl.setSpacing(16)
-
-        ico = QLabel("🔐"); ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ico.setStyleSheet("font-size:40px; background:transparent;")
-        cl.addWidget(ico)
-
-        t = QLabel("Welcome to PPW"); t.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        t.setStyleSheet(f"font-size:22px; font-weight:700; color:{TEXT};")
-        cl.addWidget(t)
-
-        sub = QLabel("Paste your MongoDB Atlas connection string to get started.\n"
-                     "Get it from: Atlas → Cluster → Connect → Drivers")
-        sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sub.setWordWrap(True)
-        sub.setStyleSheet(f"color:{TEXT_MUTED}; font-size:13px;")
-        cl.addWidget(sub)
-
-        self._uri_input = QLineEdit()
-        self._uri_input.setPlaceholderText("mongodb+srv://user:pass@cluster.mongodb.net/…")
-        self._uri_input.setFixedHeight(44)
-        cl.addWidget(self._uri_input)
-
-        self._status = QLabel("")
-        self._status.setWordWrap(True)
-        self._status.setStyleSheet(f"color:{DANGER}; font-size:12px;")
-        self._status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        cl.addWidget(self._status)
-
-        btn = QPushButton("Connect & Continue"); btn.setFixedHeight(44)
-        btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        btn.clicked.connect(self._connect)
-        cl.addWidget(btn)
-
-        tip = QLabel("Your connection string is stored only in your local .env file\nand is never sent anywhere else.")
-        tip.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        tip.setStyleSheet(f"color:{TEXT_MUTED}; font-size:11px;")
-        cl.addWidget(tip)
-
-        vl.addWidget(card, alignment=Qt.AlignmentFlag.AlignCenter)
-
-    def _connect(self):
-        import os
-        from db.database import DatabaseManager
-
-        uri = self._uri_input.text().strip()
-        if not uri.startswith("mongodb"):
-            self._status.setText("That doesn't look like a valid MongoDB URI.")
-            return
-
-        # Test connection first
-        mgr = DatabaseManager(uri)
-        if not mgr.connect():
-            self._status.setText("Could not connect. Check your URI and network, then try again.")
-            return
-
-        mgr.initialize_collections()
-        mgr.disconnect()
-
-        # Persist to .env
-        env_path = ".env"
-        lines = []
-        try:
-            with open(env_path) as f:
-                lines = f.readlines()
-        except FileNotFoundError:
-            pass
-
-        new_lines = [l for l in lines if not l.startswith("MONGO_URI")]
-        new_lines.append(f"MONGO_URI={uri}\n")
-        with open(env_path, "w") as f:
-            f.writelines(new_lines)
-
-        os.environ["MONGO_URI"] = uri
-        self.finished.emit()
-
-
 # ═════════════════════════════════════════════════════════════════════════════
 #  Main Window  (orchestrates screens)
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1302,30 +1214,70 @@ class MainWindow(QMainWindow):
         self._stack = QStackedWidget()
         self.setCentralWidget(self._stack)
 
-        self._check_setup()
+        self._connect_and_start()
 
-    def _check_setup(self):
-        from config import MONGO_URI
-        if not MONGO_URI:
-            wizard = SetupWizard()
-            wizard.finished.connect(self._init_auth)
-            self._stack.addWidget(wizard)
-            self._stack.setCurrentWidget(wizard)
-        else:
-            self._init_auth()
+    def _connect_and_start(self):
+        """Connect to the database silently, then show the auth screen.
+        The MONGO_URI comes from the developer's .env — users never see it."""
+        if not db_manager.is_connected:
+            ok = db_manager.connect()
+            if not ok:
+                self._show_db_error()
+                return
+            db_manager.initialize_collections()
+        self._init_auth()
+
+    def _show_db_error(self):
+        """Show a clean error screen if the database can't be reached."""
+        w = QWidget()
+        vl = QVBoxLayout(w)
+        vl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        card = QFrame(); card.setProperty("card", "true"); card.setFixedWidth(440)
+        cl = QVBoxLayout(card); cl.setContentsMargins(40, 36, 40, 36); cl.setSpacing(14)
+
+        ico = QLabel("⚠️"); ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ico.setStyleSheet("font-size:40px; background:transparent;")
+        cl.addWidget(ico)
+
+        title = QLabel("Cannot connect to the server")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet(f"font-size:18px; font-weight:700; color:{TEXT};")
+        cl.addWidget(title)
+
+        msg = QLabel(
+            "PPW could not reach its database.\n"
+            "Please check your internet connection and try again."
+        )
+        msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        msg.setWordWrap(True)
+        msg.setStyleSheet(f"color:{TEXT_MUTED}; font-size:13px;")
+        cl.addWidget(msg)
+
+        retry = QPushButton("Retry")
+        retry.setFixedHeight(42)
+        retry.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        retry.clicked.connect(self._on_retry)
+        cl.addWidget(retry)
+
+        vl.addWidget(card, alignment=Qt.AlignmentFlag.AlignCenter)
+        self._stack.addWidget(w)
+        self._stack.setCurrentWidget(w)
+
+    def _on_retry(self):
+        # Remove the error screen and try again
+        w = self._stack.currentWidget()
+        self._stack.removeWidget(w)
+        w.deleteLater()
+        self._connect_and_start()
 
     def _init_auth(self):
-        if not db_manager.is_connected:
-            db_manager.connect()
-            db_manager.initialize_collections()
-
         auth = AuthScreen()
         auth.authenticated.connect(self._on_auth)
         self._stack.addWidget(auth)
         self._stack.setCurrentWidget(auth)
 
     def _on_auth(self, user_id: str, session_token: str, master_password: str):
-        # Unlock the local extension API so the browser extension can connect
         extension_api.state.unlock(user_id, master_password)
         extension_api.state._on_focus = self._bring_to_front
 
@@ -1342,7 +1294,6 @@ class MainWindow(QMainWindow):
         self._init_auth()
 
     def _bring_to_front(self):
-        """Bring the window to the foreground (called by extension API)."""
         self.showNormal()
         self.raise_()
         self.activateWindow()

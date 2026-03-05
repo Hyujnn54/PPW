@@ -13,6 +13,8 @@ APP_NAME    = "Personal Password Manager"
 VERSION     = "1.0.0"
 
 # ── MongoDB Atlas ─────────────────────────────────────────────────────────────
+# This is YOUR database URI — set it in .env before building/running.
+# Users never see or configure this.
 MONGO_URI      = os.getenv("MONGO_URI", "")
 DATABASE_NAME  = os.getenv("DATABASE_NAME", "password_manager")
 
@@ -32,3 +34,12 @@ LOCKOUT_DURATION         = timedelta(minutes=30)
 PBKDF2_ITERATIONS        = 100_000
 ENCRYPTION_ALGORITHM     = "AES-256-GCM"
 
+# ── Developer guard ────────────────────────────────────────────────────────────
+# Raise at import time so you notice immediately during development.
+# In production builds the .env is baked in, so this never triggers for users.
+if not MONGO_URI:
+    raise EnvironmentError(
+        "\n\n  MONGO_URI is not set!\n"
+        "  Create a .env file (copy .env.example) and add your MongoDB Atlas URI.\n"
+        "  This is YOUR database — users never configure this.\n"
+    )

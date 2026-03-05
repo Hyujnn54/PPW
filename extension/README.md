@@ -9,79 +9,121 @@ Browser Extension  ←→  PPW Desktop App  ←→  MongoDB Atlas
    (popup UI)          (localhost:27227)      (your cloud DB)
 ```
 
-The extension talks to a **local API server** that the desktop app runs on `localhost:27227` while it is open and unlocked. Your passwords **never go through any external server** — the extension only ever contacts your own machine.
+The extension talks to a **local API server** that the desktop app runs on
+`localhost:27227` while it is open and unlocked. Your passwords **never go
+through any external server** — the extension only ever contacts your own machine.
 
-## Installing (Developer Mode)
+---
 
-Until the extension is published to the Chrome Web Store, install it manually:
+## Publishing — is it free?
 
-1. Open Chrome → `chrome://extensions`
+| Store | Cost | Notes |
+|-------|------|-------|
+| **Firefox Add-ons** | ✅ **100% free** | No fee, no waiting. Upload and publish immediately. |
+| **Chrome Web Store** | ⚠️ $5 one-time | One-time developer registration fee (not per-extension, not recurring). |
+| **Edge Add-ons** | ✅ **100% free** | Uses Chrome's MV3 extension unchanged — submit the same zip. |
+
+**Recommended path:** Publish to Firefox first (free, instant), then Chrome ($5 one-time when ready).
+
+---
+
+## Installing during development (no store needed)
+
+### Chrome / Edge
+1. Open `chrome://extensions` (or `edge://extensions`)
 2. Enable **Developer mode** (top-right toggle)
-3. Click **Load unpacked**
-4. Select the `extension/` folder inside your PPW project
-5. The 🔐 PPW icon appears in your toolbar
+3. Click **Load unpacked** → select the `extension/` folder
+4. The 🔐 PPW icon appears in the toolbar immediately
 
 ### Firefox
 1. Open `about:debugging#/runtime/this-firefox`
-2. Click **Load Temporary Add-on**
-3. Select `extension/manifest.json`
+2. Click **Load Temporary Add-on** → select `extension/manifest.json`
+3. Reloads each time you restart Firefox (permanent via Add-ons store)
+
+---
 
 ## Usage
 
 | Action | How |
 |--------|-----|
-| View vault | Click the 🔐 icon |
-| Auto-fill a login form | Open PPW popup → click ⌨️ next to the account |
+| View vault | Click the 🔐 toolbar icon |
+| Auto-fill a login | Open popup → click ⌨️ next to the account |
 | Copy a password | Click 📋 next to the account |
 | Generate a password | Click the ⚡ Generator tab |
-| Lock remotely | Click 🔒 in the popup header |
+| Lock vault remotely | Click 🔒 in the popup header |
 
 ### Auto-fill
-When you visit a site that has a matching account in your vault, PPW shows a banner at the top of the popup with a **Fill in page** button. Click it to fill the username and password fields automatically.
+When you visit a site matching an account in your vault, PPW shows a banner
+at the top of the popup: **"Match found → Fill in page"**. One click fills
+the username and password fields.
 
 ### Save new passwords
-When you submit a login form on a new site, PPW shows a notification offering to save the credentials. Click **Save** to open the desktop app and confirm.
+When you submit a new login form, PPW shows a system notification offering
+to save it. Click **Save** → desktop app opens to confirm.
+
+---
 
 ## Security
 
-- The extension **only connects to `127.0.0.1:27227`** — never to the internet
-- Every request requires a **session token** issued by the desktop app on login
-- The token changes every time you unlock the vault
-- If the desktop app is closed or locked, the extension shows the lock screen
-- Passwords are **decrypted on your machine** — the extension receives the plaintext only for the instant it fills/copies
+- Extension **only connects to `127.0.0.1:27227`** — never to the internet
+- Every request requires a **per-session token** generated at vault unlock
+- Token rotates every time you sign in
+- If the desktop app is closed or locked → extension shows the lock screen
+- Passwords are decrypted on your machine only
+
+---
 
 ## File structure
 
 ```
 extension/
-├── manifest.json        ← Chrome MV3 manifest
+├── manifest.json        ← Chrome/Edge/Firefox MV3 manifest
 ├── popup.html           ← Extension popup UI
-├── icons/               ← Extension icons (add icon16/32/48/128.png)
+├── icons/               ← PNG icons (see below)
 └── src/
-    ├── popup.js         ← Popup logic (vault list, detail, generator, settings)
-    ├── api.js           ← HTTP client for the desktop API
+    ├── popup.js         ← Vault list, detail, generator, settings
+    ├── api.js           ← HTTP client → desktop app (localhost:27227)
     ├── ui.js            ← DOM factory functions
     ├── generator.js     ← Password generation + strength scoring
     ├── background.js    ← Service worker (badge, save-offer notifications)
-    └── content.js       ← Page injector (form detect, auto-fill)
+    └── content.js       ← Page script (form detection + auto-fill injection)
 ```
 
-## Publishing to Chrome Web Store
-
-1. Zip the `extension/` folder
-2. Go to [Chrome Developer Dashboard](https://chrome.google.com/webstore/devconsole)
-3. Click **New Item** → upload the zip
-4. Fill in store listing (description, screenshots, privacy policy)
-5. Pay the one-time $5 developer fee (first time only)
-6. Submit for review (~1–3 business days)
+---
 
 ## Adding icons
 
-Place PNG icons in `extension/icons/`:
-- `icon16.png`  — 16×16
-- `icon32.png`  — 32×32
-- `icon48.png`  — 48×48
-- `icon128.png` — 128×128
+Place PNG files in `extension/icons/`:
 
-Use a simple lock or key emoji rendered to PNG, or use any icon tool.
+| File | Size |
+|------|------|
+| `icon16.png`  | 16×16  |
+| `icon32.png`  | 32×32  |
+| `icon48.png`  | 48×48  |
+| `icon128.png` | 128×128 |
 
+Free tools to generate them from an emoji or SVG:
+- [favicon.io](https://favicon.io/emoji-favicons/) — emoji → PNG in one click
+- [realfavicongenerator.net](https://realfavicongenerator.net) — SVG → all sizes
+
+---
+
+## Publishing step-by-step
+
+### Firefox (free)
+1. Zip the `extension/` folder contents (not the folder itself)
+2. Go to [addons.mozilla.org/developers](https://addons.mozilla.org/en-US/developers/)
+3. Sign in → **Submit a New Add-on** → **Upload** the zip
+4. Fill in name, description, screenshots → **Submit for Review**
+5. Auto-reviewed in minutes for unlisted; ~1–3 days for listed
+
+### Chrome Web Store ($5 one-time)
+1. Go to [chrome.google.com/webstore/devconsole](https://chrome.google.com/webstore/devconsole)
+2. Pay the $5 developer registration (one-time, covers all your extensions)
+3. **New Item** → upload the zip
+4. Fill in store listing → **Submit for Review** (~1–3 business days)
+
+### Microsoft Edge (free)
+1. Go to [partner.microsoft.com/dashboard/microsoftedge](https://partner.microsoft.com/dashboard/microsoftedge)
+2. **New Extension** → upload the same zip (no changes needed)
+3. Fill in listing → **Publish**

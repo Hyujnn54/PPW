@@ -50,13 +50,12 @@
    - **Windows**: `PPW-PasswordManager.exe`
    - **macOS**: `PPW-PasswordManager.app`
    - **Linux**: `PPW-PasswordManager`
-3. Double-click to run — **no Python or dependencies needed**
-4. On first launch the app shows a **Setup Wizard**:
-   - Paste your MongoDB Atlas connection string
-   - The app tests the connection, saves it to a local `.env` file, and takes you straight to the login screen
-5. Create your account and start saving passwords
+3. Double-click to run — **no Python, no setup, no database config**
+4. Click **Create a new account**, enter a username + email + master password
+5. Done — start saving passwords
 
-> **That's it.** Users never touch a terminal.
+> **Users never see a database, a URI, or any configuration screen.**
+> The database connection is baked into the app by you before you build and release it.
 
 ---
 
@@ -86,128 +85,108 @@ python main.py --cli         # CLI fallback
 
 ---
 
-## 🗄 How the Database Works for Users
+## 🗄 How the Database Works
 
-### Does the user need to manage a database?
+### The simple version
 
-**Short answer: No.** For regular users installing via the executable, they never interact with the database directly. Here is exactly what happens:
+This works **exactly like any other app** — like Gmail, Spotify, or any website you've ever signed up for:
 
 ```
-User downloads .exe
-        ↓
-First launch → Setup Wizard appears
-        ↓
-User pastes their MongoDB Atlas URI
-(free account, takes 2 minutes to create)
-        ↓
-App saves URI to local .env file
-        ↓
-App auto-creates all collections and indexes
-        ↓
-User registers → passwords are encrypted and stored
-        ↓
-All future launches connect automatically
+You (developer)          Users
+─────────────            ─────────────────────────────────────
+Set up 1 MongoDB    →    Register an account in YOUR app
+Atlas cluster            ↓
+                         Their encrypted passwords get saved
+                         in YOUR database
+                         ↓
+                         They log in with their username +
+                         master password to access them
 ```
 
-### Do users need their own MongoDB Atlas account?
+- **You** set up ONE MongoDB Atlas cluster and put the URI in your `.env`
+- **Users** download the app, register, and use it — they never see or touch the database
+- It works exactly like Bitwarden, 1Password, or any other password manager
 
-**Yes — each user needs their own Atlas account.** This is intentional and is the correct architecture for a password manager:
+### Do users need to configure anything?
 
-- Every user's data lives in **their own private database cluster**
-- You (the developer) have **zero access** to any user's data
-- If your servers are breached, **no user passwords are exposed**
-- Users control their own data and can delete it at any time
+**No.** Users just:
+1. Download the app
+2. Register with username + email + master password
+3. Start saving passwords
 
-### Setting up MongoDB Atlas (2 minutes, free)
+That's it. Zero database setup on their end.
 
-Tell users to follow these steps:
+### What's stored in your database?
+
+```
+Collection: master_password
+  → username, email, hashed password, encrypted encryption key, salt
+
+Collection: accounts
+  → title, username, email, URL, category — all fine in plaintext
+  → password field → AES-256-GCM encrypted (only decryptable with their master password)
+
+Collection: activity_logs
+  → login history, actions, timestamps
+
+Collection: categories
+  → account organisation
+```
+
+**The critical part:** Even if someone steals your entire database,
+they cannot read a single password. Every password is encrypted with a key
+that is itself encrypted with the user's master password — which is **never stored**.
+
+### Setting up YOUR database (one-time, you do this, not users)
 
 1. Go to [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas) → **Try Free**
-2. Create a project → **Create a Cluster** → choose **M0 Free Tier** (512 MB, always free)
-3. **Database Access** → Add Database User → set username + password
-4. **Network Access** → Add IP Address → click **Allow Access from Anywhere** (`0.0.0.0/0`)
-5. **Clusters** → click **Connect** → **Drivers** → copy the connection string
-6. Replace `<password>` in the string with the password from step 3
-7. Paste into the PPW Setup Wizard
-
-### What gets stored in the database?
-
-```
-Collections created automatically by PPW:
-┌─────────────────────────────────────────────────────────────┐
-│  master_password   — hashed master password + encrypted key │
-│  accounts          — all stored passwords (AES-256 encrypted)│
-│  activity_logs     — login history, actions, timestamps     │
-│  categories        — account organization                   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Critically — what is NOT stored:**
-- ❌ Your master password in plaintext
-- ❌ Your encryption key in plaintext
-- ❌ Any password in plaintext
-- ❌ Any data that can be read without knowing your master password
+2. Create a project → **Create Cluster** → choose **M0 Free Tier** (512 MB, always free)
+3. **Database Access** → Add Database User → username + password
+4. **Network Access** → Add IP Address → **Allow Access from Anywhere** (`0.0.0.0/0`)
+5. **Connect** → **Drivers** → copy the connection string
+6. Paste into your `.env` as `MONGO_URI`
+7. Ship the app — users never see any of this
 
 ---
 
-## 🔒 Cloud vs Local Database — Security Analysis
+## 🔒 Security Model
 
-> **TL;DR: Cloud (MongoDB Atlas) is the right choice for a password manager.** Here's the full analysis.
+### Why cloud (MongoDB Atlas) is the right choice
 
-### Cloud Database (MongoDB Atlas) ✅ Recommended
-
-| Aspect | Detail |
-|--------|--------|
-| **Accessibility** | Access passwords from any device, anywhere |
-| **Backup** | Atlas handles automated backups — no data loss |
-| **Availability** | 99.9%+ uptime SLA |
-| **Breach impact** | Even if Atlas is breached, all data is AES-256 encrypted. Attacker gets ciphertext only |
-| **Your control** | Each user owns their cluster — you can't read their data |
-| **Cost** | M0 free tier is genuinely free forever |
-| **Browser extension** | Cloud is required for the browser extension to sync |
-| **Multi-device** | Phone, laptop, desktop all in sync |
-
-### Local Database (self-hosted MongoDB) ⚠️ Advanced users only
-
-| Aspect | Detail |
-|--------|--------|
-| **Accessibility** | Only on the machine it's installed on |
-| **Backup** | User is responsible — if disk dies, data is gone |
-| **Availability** | Depends on the user's machine being on |
-| **Breach impact** | If the machine is compromised, encrypted data could be extracted |
-| **Browser extension** | Would need a local API server running — complex setup |
-| **Multi-device** | Not possible without extra infrastructure |
-
-### What actually protects users regardless of where the DB lives
-
-The real security model is **encryption at the application layer**, not database-level security:
+You host one Atlas cluster. All user data goes into it — encrypted. Even if Atlas is breached, every password in the database is AES-256-GCM encrypted and **completely unreadable** without the user's master password, which is never stored anywhere.
 
 ```
-Master Password (user's brain — never stored anywhere)
+User's master password  (lives only in their head — never stored)
         ↓
-PBKDF2-HMAC-SHA256  (100,000 iterations + unique salt)
+PBKDF2-HMAC-SHA256  (100,000 iterations + unique salt per user)
         ↓
-Derived Key  (used only in memory, discarded after session)
+Derived key  (in memory only, discarded after session)
         ↓
-Decrypts the Encryption Key  (stored encrypted in DB)
+Decrypts the user's Encryption Key  (stored encrypted in Atlas)
         ↓
-AES-256-GCM  encrypts/decrypts each individual password
+AES-256-GCM decrypts each individual password
+        ↓
+Plaintext  (shown/copied, never written to disk)
 ```
 
-This means:
-- **Even if MongoDB Atlas is fully compromised** → attacker sees only random bytes
-- **Even if someone steals your `.env` file** → they can connect to Atlas but still can't read passwords without your master password
-- **Even if someone clones your entire database** → all they have is encrypted data
+### What this means in practice
 
-### Verdict
+| Threat | Impact |
+|--------|--------|
+| Your Atlas cluster is breached | Attacker gets encrypted blobs — useless without every user's master password |
+| Someone clones the entire database | Same — all ciphertext, no keys |
+| Your `.env` file is stolen | Attacker can connect to Atlas but still can't read any passwords |
+| A user forgets their master password | Their data is permanently inaccessible — this is intentional |
 
-Use **MongoDB Atlas** (cloud). It gives users:
-- Free storage
-- Automatic backups
-- Multi-device access
-- Required for the browser extension
+### Attack surface
 
-The encryption guarantees mean cloud storage is just as safe as local — and far more practical.
+| Attack | Countermeasure |
+|--------|---------------|
+| Brute-force login | 5 attempts → 30 min lockout |
+| Weak master passwords | Min 12 chars, upper+lower+digit+symbol enforced |
+| Session hijacking | Cryptographically random tokens, 15-min timeout |
+| Rainbow tables | Unique per-user PBKDF2 salt |
+| Timing attacks | `secrets.compare_digest` for all comparisons |
 
 ---
 
@@ -255,79 +234,27 @@ App start
 
 ---
 
-## 🔐 Security
+## 🌐 Browser Extension
 
-### Encryption model
+The `extension/` folder contains a full Chrome/Firefox/Edge MV3 extension.
 
-```
-User types master password
-        │
-        ▼
-PBKDF2-HMAC-SHA256
-iterations = 100,000
-salt       = random 32 bytes (unique per user, stored in DB)
-        │
-        ▼
-Master Key  ──────────────────────────────────────────────┐
-(never stored)                                            │
-                                          AES-256-GCM     │
-                                   Encryption Key ◄───────┘
-                                   (stored encrypted)
-                                          │
-                                          ▼
-                               AES-256-GCM per password
-                               (nonce random each time)
-                                          │
-                                          ▼
-                               Ciphertext stored in Atlas
-```
+### Publishing cost
 
-### Attack resistance
+| Store | Cost |
+|-------|------|
+| Firefox Add-ons | ✅ Free |
+| Microsoft Edge Add-ons | ✅ Free |
+| Chrome Web Store | ⚠️ $5 one-time registration |
 
-| Attack | Countermeasure |
-|--------|---------------|
-| Brute-force login | 5 attempts → 30 min lockout + rate limiting |
-| Stolen database | All data AES-256 encrypted, useless without master password |
-| Weak master passwords | Validator: min 12 chars, upper+lower+digit+symbol required |
-| Session hijacking | Cryptographically random tokens, 15-min timeout |
-| Rainbow tables | Unique per-user PBKDF2 salt |
-| Timing attacks | `secrets.compare_digest` for all token comparisons |
-| Injection | MongoDB (no SQL), all inputs sanitized |
+**Start with Firefox** (free, no waiting). Use the same zip for Edge (also free). Chrome requires a $5 one-time developer fee — not per extension, not recurring.
 
----
-
-## 🌐 Browser Extension Roadmap
-
-The extension will communicate with PPW using a **local REST API** that the desktop app exposes while it's running.
-
-### Architecture
+### How it connects
 
 ```
-Browser Extension (Chrome / Firefox)
-        │
-        │  HTTP  localhost:27227
-        ▼
-PPW Desktop App  ──►  MongoDB Atlas
-(local API server)         (encrypted data)
+Extension popup → http://127.0.0.1:27227 → PPW desktop app (when open + unlocked)
 ```
 
-### What the extension will do
-
-- **Auto-fill** — detect login forms, suggest matching accounts
-- **Auto-save** — prompt to save new passwords as you type them
-- **Generator** — generate passwords directly in the browser
-- **Quick copy** — copy username/password with one click from the popup
-
-### Security for the extension
-
-- Communication is **localhost only** — not exposed to the internet
-- Requests require a **session token** issued by the desktop app
-- The browser extension **never stores passwords** — it always fetches from the app
-- App must be running and unlocked for the extension to work
-
-### Why cloud DB is required for the extension
-
-The extension works via the desktop app's local API. If the desktop app is closed, the extension needs to fall back to a **direct Atlas connection** to still serve passwords. This requires the database to be reachable from the browser — which means cloud.
+The desktop app runs a local API server. The extension talks only to your own machine — never to any external server. See `extension/README.md` for full details.
 
 ---
 
