@@ -11,9 +11,8 @@ def main():
 
     if not use_cli:
         try:
-            from gui_app import main as gui_main
-
-            gui_main()
+            import gui_app as _gui
+            _gui.main()
             return
         except ImportError:
             print("PyQt6 not found. Falling back to CLI. Install with: pip install PyQt6")
