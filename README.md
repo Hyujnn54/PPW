@@ -72,16 +72,18 @@ Your master password never leaves your device. It's used as a key to lock and un
 They would get a collection of scrambled data that is mathematically impossible to read without your master password. It would look something like this:
 
 ```
-gAAAAABh3xK9mN2pQr7sT1uVwXyZ...  ← this is what a stolen password looks like
+K7fQx2mB9pLnRtYvWcAeHjUsDzXo...  ← this is what a stolen password looks like
 ```
 
 Completely useless without the key — which only you have.
 
 ### The encryption behind it
 
-PPW uses **AES-256** — the same encryption standard used by banks, governments, and the military. Every password is encrypted individually, so even if one were somehow compromised, the rest remain safe.
+PPW uses **AES-256-GCM** — the same encryption standard used by banks, governments, and the military worldwide. Every single password is encrypted individually with its own random value, so even if one were somehow compromised, the rest of your vault stays completely safe.
 
-Your master password itself is never stored. Instead, PPW puts it through **100,000 rounds of processing** with a unique random value specific to your account before using it as an encryption key. This makes it practically impossible to guess through brute force.
+Your master password is never stored — not on your device, not in the cloud, nowhere. Instead, PPW runs it through **100,000 rounds of processing** combined with a unique random value tied to your account before using it as an encryption key. This makes guessing attacks completely impractical — even with powerful computers it would take longer than the age of the universe to try all possible combinations.
+
+When you change your master password, your saved passwords don't need to be re-encrypted — only the key that unlocks them is re-wrapped. Your data is never exposed during the process.
 
 ---
 
@@ -144,4 +146,6 @@ It lets you fill in login forms from your browser without copying and pasting. I
 ## License
 
 [MIT](LICENSE) — free to use and share.
+
+
 
