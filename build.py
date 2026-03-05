@@ -1,13 +1,7 @@
 """
 PPW build script.
-Produces: dist/PPW-Setup.exe  (Inno Setup installer)
-          dist/PPW-PasswordManager.exe (raw exe, also inside the installer)
-
-Steps:
-  1. Write config_frozen.py with MONGO_URI baked in
-  2. Run PyInstaller -> dist/PPW-PasswordManager.exe
-  3. Run Inno Setup  -> dist/PPW-Setup.exe
-  4. Delete config_frozen.py
+Produces: dist/PPW-PasswordManager.exe  (via PyInstaller)
+          dist/PPW-Setup.exe             (via Inno Setup)
 """
 import os
 import sys
@@ -21,12 +15,10 @@ SPEC   = ROOT / "ppw.spec"
 FROZEN = ROOT / "config_frozen.py"
 ISS    = ROOT / "installer.iss"
 
-# Inno Setup compiler locations (GitHub Actions + common local installs)
-ISCC_CANDIDATES = [
+ISCC_PATHS = [
     r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
     r"C:\Program Files\Inno Setup 6\ISCC.exe",
     r"C:\Program Files (x86)\Inno Setup 5\ISCC.exe",
-    "ISCC.exe",   # if on PATH
 ]
 
 
@@ -88,11 +80,6 @@ def delete_frozen_config():
 
 
 def write_spec():
-    has_icon = (ROOT / "extension" / "icons" / "icon.ico").exists()
-    icon_line = (
-        "    icon='" + str(ROOT / "extension" / "icons" / "icon.ico").replace("\\", "\\\\") + "',\n"
-        if has_icon else "    icon=None,\n"
-    )
     spec_text = (
         "block_cipher = None\n"
         "a = Analysis(\n"
@@ -102,7 +89,7 @@ def write_spec():
         "    datas=[],\n"
         "    hiddenimports=[\n"
         "        'config_frozen',\n"
-        "        'pymongo', 'pymongo.srv', 'pymongo.monitoring',\n"
+        "        'pymongo', 'pymongo.monitoring',\n"
         "        'dns', 'dns.resolver',\n"
         "        'cryptography',\n"
         "        'cryptography.hazmat.primitives.ciphers.aead',\n"
@@ -120,7 +107,7 @@ def write_spec():
         "    pyz, a.scripts, a.binaries, a.zipfiles, a.datas, [],\n"
         "    name='PPW-PasswordManager',\n"
         "    debug=False, strip=False, upx=True, console=False,\n"
-        + icon_line +
+        "    icon=None,\n"
         ")\n"
     )
     SPEC.write_text(spec_text, encoding="utf-8")
@@ -147,49 +134,41 @@ def build_exe():
     print("[OK] EXE: " + str(exe) + " (" + str(mb) + " MB)")
 
 
-def build_installer():
-    # Install Inno Setup on the runner if not present
-    iscc = None
-    for candidate in ISCC_CANDIDATES:
-        if Path(candidate).exists() or candidate == "ISCC.exe":
-            try:
-                subprocess.check_call(
-                    [candidate, "/?"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                iscc = candidate
-                break
-            except (FileNotFoundError, subprocess.CalledProcessError):
-                continue
+def find_iscc():
+    for path in ISCC_PATHS:
+        if Path(path).exists():
+            return path
+    return None
 
+
+def build_installer():
+    iscc = find_iscc()
     if iscc is None:
         print("-- Inno Setup not found, installing via choco --")
-        try:
-            subprocess.check_call(
-                ["choco", "install", "innosetup", "-y", "--no-progress"],
-                stdout=subprocess.DEVNULL,
-            )
-            iscc = r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-        except Exception as e:
-            print("[WARN] Could not install Inno Setup: " + str(e))
-            print("[WARN] Skipping installer build - only raw EXE will be released")
-            return
+        subprocess.check_call(
+            ["choco", "install", "innosetup", "--yes", "--no-progress"],
+            stdout=subprocess.DEVNULL,
+        )
+        iscc = find_iscc()
 
-    print("-- Building installer with Inno Setup --")
+    if iscc is None:
+        sys.exit("[ERROR] Inno Setup not found even after choco install")
+
+    print("-- Running Inno Setup --")
     subprocess.check_call([iscc, str(ISS)])
+
     setup = DIST / "PPW-Setup.exe"
     if setup.exists():
         mb = round(setup.stat().st_size / 1_048_576, 1)
         print("[OK] Installer: " + str(setup) + " (" + str(mb) + " MB)")
     else:
-        print("[WARN] PPW-Setup.exe not found after Inno Setup")
+        sys.exit("[ERROR] PPW-Setup.exe not found after Inno Setup")
 
 
 if __name__ == "__main__":
+    write_frozen_config()
+    write_spec()
     try:
-        write_frozen_config()
-        write_spec()
         build_exe()
         build_installer()
     finally:

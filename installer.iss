@@ -1,14 +1,11 @@
 ; PPW Inno Setup Script
-; Produces: PPW-Setup.exe
-; Installs to: C:\Program Files\PPW
-; Creates: Start Menu shortcut, Desktop shortcut, Uninstall entry
+; Produces: dist\PPW-Setup.exe
 
 #define AppName "PPW Password Manager"
 #define AppVersion "1.0.0"
 #define AppPublisher "PPW"
 #define AppURL "https://github.com/Hyujnn54/PPW"
 #define AppExeName "PPW-PasswordManager.exe"
-#define AppDescription "Secure password manager with cloud sync"
 
 [Setup]
 AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
@@ -23,7 +20,6 @@ DefaultGroupName={#AppName}
 AllowNoIcons=yes
 OutputDir=dist
 OutputBaseFilename=PPW-Setup
-SetupIconFile=extension\icons\icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -31,7 +27,6 @@ DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#AppExeName}
 UninstallDisplayName={#AppName}
 VersionInfoVersion={#AppVersion}
-VersionInfoDescription={#AppDescription}
 VersionInfoCompany={#AppPublisher}
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
@@ -58,10 +53,4 @@ Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName}"; Flags: nowait
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
-
-[Code]
-function InitializeSetup(): Boolean;
-begin
-  Result := True;
-end;
 
