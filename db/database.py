@@ -2,7 +2,7 @@
 Database operations and connection management
 """
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
+from pymongo.errors import ConnectionFailure, OperationFailure, ConfigurationError
 import logging
 from typing import Optional
 from config import (
@@ -39,8 +39,20 @@ class DatabaseManager:
             self.is_connected = True
             logger.info(f"Successfully connected to MongoDB Atlas - Database: {DATABASE_NAME}")
             return True
+        except OperationFailure as e:
+            logger.error(f"MongoDB authentication failed — check username/password in MONGO_URI: {e}")
+            self.is_connected = False
+            return False
+        except ConfigurationError as e:
+            logger.error(f"MongoDB URI is malformed — check MONGO_URI format: {e}")
+            self.is_connected = False
+            return False
         except ConnectionFailure as e:
-            logger.error(f"Failed to connect to MongoDB: {e}")
+            logger.error(f"MongoDB connection failed — check network/URI: {e}")
+            self.is_connected = False
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error connecting to MongoDB: {e}")
             self.is_connected = False
             return False
 

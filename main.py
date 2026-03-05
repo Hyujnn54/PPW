@@ -21,11 +21,19 @@ def main():
 
     # ── CLI fallback ──────────────────────────────────────────────
     import os
-    if not os.getenv("MONGO_URI"):
+    uri = os.getenv("MONGO_URI", "")
+
+    if not uri:
         sys.exit(
             "\n  ✗  MONGO_URI is not set.\n"
             "  Copy .env.example to .env and fill in your MongoDB Atlas URI.\n"
-            "  See README.md → Development Setup for instructions.\n"
+        )
+
+    if "<db_password>" in uri or "<password>" in uri:
+        sys.exit(
+            "\n  ✗  MONGO_URI still has a placeholder password.\n"
+            "  Open .env and replace  <db_password>  with your real Atlas password.\n"
+            "  Get it from: Atlas → Database Access → your user → Edit → show password.\n"
         )
 
     from db.database import db_manager

@@ -1220,7 +1220,11 @@ class MainWindow(QMainWindow):
         """Connect to the database silently, then show the auth screen.
         The MONGO_URI comes from the developer's .env — users never see it."""
         import os
-        if not os.getenv("MONGO_URI"):
+        from pymongo.errors import OperationFailure, ConfigurationError
+
+        uri = os.getenv("MONGO_URI", "")
+
+        if not uri:
             self._show_db_error(
                 "MONGO_URI is not configured.",
                 "Add your MongoDB Atlas connection string to the .env file.\n"
@@ -1228,14 +1232,28 @@ class MainWindow(QMainWindow):
             )
             return
 
+        # Warn if the URI still has the placeholder password
+        if "<db_password>" in uri or "<password>" in uri:
+            self._show_db_error(
+                "MongoDB password not set.",
+                "Your MONGO_URI in .env still contains a placeholder.\n\n"
+                "Replace  <db_password>  with your real Atlas database password."
+            )
+            return
+
         if not db_manager.is_connected:
             ok = db_manager.connect()
             if not ok:
-                self._show_db_error(
-                    "Cannot connect to the server.",
-                    "PPW could not reach its database.\n"
-                    "Check your internet connection and try again."
-                )
+                # Detect auth vs network error from the log/URI
+                if "bad auth" in str(db_manager.client) if db_manager.client else False:
+                    title = "Authentication failed."
+                    msg = "Wrong username or password in MONGO_URI.\nCheck your .env file."
+                else:
+                    title = "Cannot connect to the server."
+                    msg = ("PPW could not reach MongoDB Atlas.\n"
+                           "Check your internet connection, and that the\n"
+                           "password in MONGO_URI is correct.")
+                self._show_db_error(title, msg)
                 return
             db_manager.initialize_collections()
         self._init_auth()
