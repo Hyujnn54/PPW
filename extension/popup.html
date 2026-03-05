@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PPW</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --surface2:  #22263a;
+      --border:    #2e3250;
+      --accent:    #6c63ff;
+      --accent-h:  #7b73ff;
+      --text:      #e2e8f0;
+      --muted:     #718096;
+      --success:   #48bb78;
+      --warning:   #ed8936;
+      --danger:    #fc8181;
+    }
+
+    body {
+      width: 360px;
+      min-height: 480px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .header-left span { font-size: 20px; }
+    .header-left strong { font-size: 15px; font-weight: 700; }
+    .header-right { display: flex; gap: 6px; }
+    .icon-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 5px 8px;
+      transition: all .15s;
+    }
+    .icon-btn:hover { background: var(--border); color: var(--text); }
+
+    /* ── Screens ── */
+    .screen { display: none; padding: 16px; }
+    .screen.active { display: block; }
+
+    /* ── Lock screen ── */
+    #screen-lock {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 380px;
+      gap: 14px;
+      padding: 24px;
+    }
+    #screen-lock .lock-icon { font-size: 48px; }
+    #screen-lock h2 { font-size: 18px; font-weight: 700; }
+    #screen-lock p { color: var(--muted); font-size: 12px; text-align: center; line-height: 1.6; }
+
+    /* ── Vault screen ── */
+    .search-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .search-bar input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      height: 36px;
+      padding: 0 12px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .search-bar input:focus { border-color: var(--accent); }
+
+    .account-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; }
+    .account-list::-webkit-scrollbar { width: 4px; }
+    .account-list::-webkit-scrollbar-track { background: transparent; }
+    .account-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .account-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: border-color .15s, background .15s;
+    }
+    .account-card:hover { border-color: var(--accent); background: var(--surface2); }
+
+    .account-icon {
+      background: #6c63ff22;
+      border-radius: 50%;
+      font-size: 16px;
+      height: 36px;
+      width: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .account-info { flex: 1; min-width: 0; }
+    .account-info .title { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .account-info .sub   { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .card-actions { display: flex; gap: 4px; }
+    .card-actions button {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 4px 7px;
+      transition: all .15s;
+    }
+    .card-actions button:hover { background: var(--border); color: var(--text); }
+
+    /* ── Detail view ── */
+    #screen-detail .back-btn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 0;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .detail-icon { font-size: 32px; }
+    .detail-header h2 { font-size: 18px; font-weight: 700; }
+    .detail-header .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .badge-strong { background: #48bb7822; color: var(--success); border: 1px solid #48bb7855; }
+    .badge-medium { background: #ed893622; color: var(--warning); border: 1px solid #ed893655; }
+    .badge-weak   { background: #fc818122; color: var(--danger);  border: 1px solid #fc818155; }
+
+    .field-row { margin-bottom: 12px; }
+    .field-row label { color: var(--muted); font-size: 11px; display: block; margin-bottom: 4px; }
+    .field-row .field-value {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .field-row .field-value span { flex: 1; font-size: 13px; word-break: break-all; }
+    .field-row .field-value .copy-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: all .15s;
+      flex-shrink: 0;
+    }
+    .field-row .field-value .copy-btn:hover { background: var(--border); color: var(--text); }
+
+    .pw-masked { font-family: monospace; letter-spacing: 3px; }
+
+    /* ── Generator screen ── */
+    .gen-output {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+    }
+    .gen-output #gen-pw {
+      flex: 1;
+      font-family: monospace;
+      font-size: 14px;
+      word-break: break-all;
+      color: var(--text);
+    }
+    .strength-bar {
+      height: 5px;
+      background: var(--border);
+      border-radius: 3px;
+      margin-bottom: 6px;
+      overflow: hidden;
+    }
+    .strength-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+    .strength-label { color: var(--muted); font-size: 11px; margin-bottom: 14px; }
+
+    .gen-options label { color: var(--muted); font-size: 12px; display: block; margin-bottom: 4px; }
+    .gen-options input[type=range] { width: 100%; accent-color: var(--accent); }
+    .checkbox-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .checkbox-row label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--text);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .checkbox-row input[type=checkbox] { accent-color: var(--accent); }
+
+    /* ── Settings screen ── */
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .setting-row .label h3 { font-size: 13px; font-weight: 600; }
+    .setting-row .label p  { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .setting-row input[type=text] {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 12px;
+      height: 32px;
+      padding: 0 10px;
+      width: 160px;
+      outline: none;
+    }
+    .setting-row input[type=text]:focus { border-color: var(--accent); }
+    .toggle {
+      position: relative;
+      width: 38px;
+      height: 21px;
+    }
+    .toggle input { display: none; }
+    .toggle-slider {
+      background: var(--border);
+      border-radius: 11px;
+      cursor: pointer;
+      inset: 0;
+      position: absolute;
+      transition: .2s;
+    }
+    .toggle-slider::before {
+      background: white;
+      border-radius: 50%;
+      bottom: 3px;
+      content: '';
+      height: 15px;
+      left: 3px;
+      position: absolute;
+      transition: .2s;
+      width: 15px;
+    }
+    .toggle input:checked + .toggle-slider { background: var(--accent); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(17px); }
+
+    /* ── Shared elements ── */
+    .btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      height: 38px;
+      padding: 0 18px;
+      transition: background .15s;
+      width: 100%;
+    }
+    .btn:hover { background: var(--accent-h); }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover { background: var(--surface2); }
+
+    .empty-state {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 40px 0;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    .status-bar {
+      background: var(--success);
+      border-radius: 6px;
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+      opacity: 0;
+      padding: 7px 12px;
+      text-align: center;
+      transition: opacity .2s;
+    }
+    .status-bar.show { opacity: 1; }
+
+    /* ── Nav tabs ── */
+    .nav-tabs {
+      display: flex;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .nav-tab {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 10px 0 8px;
+      transition: color .15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .nav-tab span { font-size: 10px; }
+    .nav-tab.active { color: var(--accent); }
+    .nav-tab:hover:not(.active) { color: var(--text); }
+
+    /* ── Autofill banner ── */
+    #autofill-banner {
+      display: none;
+      background: #6c63ff22;
+      border: 1px solid #6c63ff55;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: var(--text);
+    }
+    #autofill-banner.show { display: flex; align-items: center; gap: 10px; }
+    #autofill-banner strong { color: var(--accent); }
+    #autofill-banner .fill-btn {
+      margin-left: auto;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 12px;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <div class="header">
+    <div class="header-left">
+      <span>🔐</span>
+      <strong>PPW</strong>
+    </div>
+    <div class="header-right" id="header-actions" style="display:none">
+      <button class="icon-btn" id="btn-lock" title="Lock vault">🔒</button>
+      <button class="icon-btn" id="btn-add"  title="Add account">＋</button>
+    </div>
+  </div>
+
+  <!-- ── Lock screen ── -->
+  <div id="screen-lock" class="screen active">
+    <div class="lock-icon">🔐</div>
+    <h2>PPW is locked</h2>
+    <p>
+      Open the PPW desktop app and sign in.<br>
+      The extension will connect automatically.
+    </p>
+    <button class="btn" id="btn-retry" style="width:auto;padding:0 28px;">
+      Try again
+    </button>
+    <p style="font-size:11px;color:var(--muted);margin-top:8px;">
+      Need PPW?
+      <a href="https://github.com/yourusername/PPW/releases"
+         target="_blank" style="color:var(--accent);">Download</a>
+    </p>
+  </div>
+
+  <!-- ── Main shell (shown when connected) ── -->
+  <div id="shell" style="display:none;">
+
+    <!-- Vault screen -->
+    <div id="screen-vault" class="screen active">
+      <div id="autofill-banner">
+        <span>🔑 Match found: <strong id="autofill-title"></strong></span>
+        <button class="fill-btn" id="btn-autofill">Fill in page</button>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="search-input" placeholder="🔍  Search vault…">
+      </div>
+      <div class="account-list" id="account-list">
+        <div class="empty-state">Loading vault…</div>
+      </div>
+    </div>
+
+    <!-- Detail screen -->
+    <div id="screen-detail" class="screen">
+      <button class="back-btn" id="btn-back">← Back</button>
+      <div class="detail-header">
+        <div class="detail-icon" id="detail-icon"></div>
+        <div>
+          <h2 id="detail-title"></h2>
+          <span class="badge" id="detail-badge"></span>
+        </div>
+      </div>
+      <div id="detail-fields"></div>
+    </div>
+
+    <!-- Generator screen -->
+    <div id="screen-generator" class="screen">
+      <div class="gen-output">
+        <span id="gen-pw">Generating…</span>
+        <button class="copy-btn" id="btn-copy-gen" title="Copy">📋</button>
+        <button class="copy-btn" id="btn-regen" title="Regenerate">🔄</button>
+      </div>
+      <div class="strength-bar">
+        <div class="strength-fill" id="gen-strength-fill" style="width:0%"></div>
+      </div>
+      <div class="strength-label" id="gen-strength-label"></div>
+
+      <div class="gen-options">
+        <label>Length: <strong id="gen-len-display">20</strong></label>
+        <input type="range" id="gen-length" min="8" max="64" value="20">
+        <div class="checkbox-row">
+          <label><input type="checkbox" id="gen-upper"  checked> A–Z</label>
+          <label><input type="checkbox" id="gen-lower"  checked> a–z</label>
+          <label><input type="checkbox" id="gen-digits" checked> 0–9</label>
+          <label><input type="checkbox" id="gen-syms"   checked> !@#$</label>
+        </div>
+      </div>
+      <div id="status-gen" class="status-bar" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- Settings screen -->
+    <div id="screen-settings" class="screen">
+      <div class="setting-row">
+        <div class="label">
+          <h3>Desktop app URL</h3>
+          <p>Where the PPW local API runs</p>
+        </div>
+        <input type="text" id="setting-api-url" value="http://localhost:27227">
+      </div>
+      <div class="setting-row">
+        <div class="label">
+          <h3>Auto-fill</h3>
+          <p>Offer to fill login forms automatically</p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="setting-autofill" checked>
+          <div class="toggle-slider"></div>
+        </label>
+      </div>
+      <div class="setting-row">
+        <div class="label">
+          <h3>Login alerts</h3>
+          <p>Show notification on new logins</p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="setting-alerts" checked>
+          <div class="toggle-slider"></div>
+        </label>
+      </div>
+      <div style="margin-top:16px;">
+        <button class="btn" id="btn-save-settings">Save settings</button>
+      </div>
+      <div id="status-settings" class="status-bar"></div>
+    </div>
+
+    <!-- Nav tabs -->
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-screen="vault">🗄️<span>Vault</span></button>
+      <button class="nav-tab" data-screen="generator">⚡<span>Generate</span></button>
+      <button class="nav-tab" data-screen="settings">⚙️<span>Settings</span></button>
+    </div>
+
+  </div><!-- /shell -->
+
+  <script src="src/popup.js" type="module"></script>
+</body>
+</html>
+

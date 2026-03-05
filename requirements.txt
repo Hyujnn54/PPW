@@ -1,23 +1,18 @@
-# Core Dependencies
+# Core
 pymongo>=4.6.0
 cryptography>=41.0.0
 python-dotenv>=1.0.0
 
-# Web Framework
-Flask>=3.0.0
-Flask-CORS>=4.0.0
-Flask-Limiter>=3.5.0
-
-# GUI Framework
+# GUI
 PyQt6>=6.6.0
-PyQt6-WebEngine>=6.6.0
 
-# Additional Security
+# Security
 bcrypt>=4.1.0
 pyotp>=2.9.0
 
 # Utilities
 colorama>=0.4.6
-tabulate>=0.9.0
+pyperclip>=1.8.2
 
-
+# Build (dev only — not needed at runtime)
+# pyinstaller>=6.0.0

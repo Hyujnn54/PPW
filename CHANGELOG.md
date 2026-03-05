@@ -8,9 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial release preparation
-- Deployment documentation
-- Release automation
+- Proper Login vs Register screens with confirm-password + required email field
+- Welcome email on registration (HTML + plain text via SMTP)
+- Login alert email on every new sign-in
+- Browser extension (Chrome/Firefox MV3): vault popup, auto-fill, generator, save-offer
+- Local extension API server (`localhost:27227`) — extension talks to desktop app only
+- `utils/email_service.py` — SMTP email helper (works with Gmail, Outlook, any provider)
+- `utils/extension_api.py` — local HTTP API for the browser extension
+
+### Changed
+- Email is now **required** on registration (used for security alerts)
+- Auth screen has a confirm-password field on the Register side
+- `.env.example` updated with SMTP email configuration
+- `requirements.txt` cleaned — removed unused Flask/web deps, added pyperclip
+- `config.py` no longer contains any hardcoded credentials
+
+### Fixed
+- Deprecated `datetime.utcnow()` replaced with `datetime.now(timezone.utc)`
+- Removed unused imports across utils and controllers
+
+### Security
+- Extension API token rotated on every vault unlock
+- Extension API binds to `127.0.0.1` only — not reachable from the network
+- CORS header restricts to `chrome-extension://` origin only
 
 ## [1.0.0] - 2026-03-05
 

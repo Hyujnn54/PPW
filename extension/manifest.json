@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "PPW Password Manager",
+  "version": "1.0.0",
+  "description": "Auto-fill and save passwords from your PPW vault.",
+
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "contextMenus",
+    "notifications"
+  ],
+
+  "host_permissions": [
+    "http://localhost:27227/*",
+    "<all_urls>"
+  ],
+
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "32":  "icons/icon32.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "PPW Password Manager"
+  },
+
+  "icons": {
+    "16":  "icons/icon16.png",
+    "32":  "icons/icon32.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
+

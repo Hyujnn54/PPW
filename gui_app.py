@@ -17,6 +17,7 @@ from controllers.auth_controller import AuthController
 from controllers.account_controller import AccountController
 from controllers.security_controller import SecurityController
 from db.database import db_manager
+from utils import extension_api
 
 # ── Clipboard helper (no hard dep on pyperclip) ───────────────────────────────
 try:
@@ -308,52 +309,63 @@ class AccountCard(QFrame):
 # ═════════════════════════════════════════════════════════════════════════════
 
 class AuthScreen(QWidget):
+    """
+    Two-page auth screen:
+      - Login  : username + master password
+      - Register: username + email (required) + password + confirm password
+    Animated toggle between the two.
+    """
     authenticated = pyqtSignal(str, str, str)   # user_id, session_token, master_password
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._mode = "login"   # "login" | "register"
+        self._mode = "login"
         self._build()
 
     def _build(self):
         outer = QVBoxLayout(self)
         outer.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        card = QFrame()
-        card.setProperty("card", "true")
-        card.setFixedWidth(420)
-        vl = QVBoxLayout(card)
-        vl.setContentsMargins(40, 40, 40, 40)
-        vl.setSpacing(18)
+        self._card = QFrame()
+        self._card.setProperty("card", "true")
+        self._card.setFixedWidth(440)
+        vl = QVBoxLayout(self._card)
+        vl.setContentsMargins(44, 40, 44, 40)
+        vl.setSpacing(14)
 
-        # Logo / title
+        # ── Logo ──────────────────────────────────────────────────
         logo = QLabel("🔐")
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        logo.setStyleSheet("font-size: 42px; background: transparent;")
+        logo.setStyleSheet("font-size: 44px; background: transparent;")
         vl.addWidget(logo)
 
         self._title = QLabel("Welcome back")
         self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._title.setStyleSheet(f"font-size: 22px; font-weight: 700; color: {TEXT}; background: transparent;")
+        self._title.setStyleSheet(
+            f"font-size: 22px; font-weight: 700; color: {TEXT}; background: transparent;")
         vl.addWidget(self._title)
 
-        self._subtitle = QLabel("Sign in to your vault")
+        self._subtitle = QLabel("Enter your master password to unlock your vault")
         self._subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._subtitle.setStyleSheet(f"color: {TEXT_MUTED}; background: transparent; margin-bottom: 8px;")
+        self._subtitle.setWordWrap(True)
+        self._subtitle.setStyleSheet(
+            f"color: {TEXT_MUTED}; background: transparent; font-size: 12px; margin-bottom: 4px;")
         vl.addWidget(self._subtitle)
 
-        # Fields
+        # ── Fields ────────────────────────────────────────────────
         self._username = QLineEdit()
         self._username.setPlaceholderText("Username")
         self._username.setFixedHeight(42)
         vl.addWidget(self._username)
 
+        # Register-only fields
         self._email = QLineEdit()
-        self._email.setPlaceholderText("Email (optional)")
+        self._email.setPlaceholderText("Email address  (required — used for security alerts)")
         self._email.setFixedHeight(42)
         self._email.setVisible(False)
         vl.addWidget(self._email)
 
+        # Password row
         pw_row = QHBoxLayout()
         self._password = QLineEdit()
         self._password.setPlaceholderText("Master password")
@@ -361,95 +373,170 @@ class AuthScreen(QWidget):
         self._password.setFixedHeight(42)
         self._password.returnPressed.connect(self._submit)
         pw_row.addWidget(self._password)
-
         self._eye_btn = QPushButton("👁")
         self._eye_btn.setFixedSize(42, 42)
-        self._eye_btn.setStyleSheet(f"background: {SURFACE2}; border: 1px solid {BORDER}; border-radius: 8px; font-size: 14px;")
+        self._eye_btn.setStyleSheet(
+            f"background:{SURFACE2};border:1px solid {BORDER};border-radius:8px;font-size:14px;")
         self._eye_btn.clicked.connect(self._toggle_eye)
         pw_row.addWidget(self._eye_btn)
         vl.addLayout(pw_row)
 
-        # Status message
+        # Confirm password (register only)
+        self._confirm_pw = QLineEdit()
+        self._confirm_pw.setPlaceholderText("Confirm master password")
+        self._confirm_pw.setEchoMode(QLineEdit.EchoMode.Password)
+        self._confirm_pw.setFixedHeight(42)
+        self._confirm_pw.setVisible(False)
+        self._confirm_pw.returnPressed.connect(self._submit)
+        vl.addWidget(self._confirm_pw)
+
+        # Password hint (register only)
+        self._pw_hint = QLabel(
+            "Min 12 chars · uppercase · lowercase · digit · symbol")
+        self._pw_hint.setStyleSheet(
+            f"color:{TEXT_MUTED}; font-size:11px; background:transparent;")
+        self._pw_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._pw_hint.setVisible(False)
+        vl.addWidget(self._pw_hint)
+
+        # Status label
         self._status = QLabel("")
         self._status.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._status.setWordWrap(True)
-        self._status.setStyleSheet(f"color: {DANGER}; background: transparent; font-size: 12px;")
+        self._status.setStyleSheet(
+            f"color:{DANGER}; background:transparent; font-size:12px;")
         vl.addWidget(self._status)
 
-        # Primary action
+        # Primary button
         self._submit_btn = QPushButton("Sign In")
         self._submit_btn.setFixedHeight(44)
         self._submit_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._submit_btn.clicked.connect(self._submit)
         vl.addWidget(self._submit_btn)
 
-        # Toggle link
-        self._toggle_btn = QPushButton("Don't have an account? Create one")
-        self._toggle_btn.setProperty("flat", "true")
-        self._toggle_btn.setStyleSheet(f"background: transparent; color: {ACCENT}; border: none; font-size: 12px;")
+        # Divider
+        div_row = QHBoxLayout()
+        for _ in range(2):
+            line = QFrame()
+            line.setFrameShape(QFrame.Shape.HLine)
+            line.setStyleSheet(f"color:{BORDER};")
+            div_row.addWidget(line)
+        or_lbl = QLabel(" or ")
+        or_lbl.setStyleSheet(f"color:{TEXT_MUTED}; font-size:11px;")
+        div_row.insertWidget(1, or_lbl)
+        vl.addLayout(div_row)
+
+        # Toggle button
+        self._toggle_btn = QPushButton("Create a new account")
+        self._toggle_btn.setFixedHeight(40)
         self._toggle_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self._toggle_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {SURFACE2};
+                color: {ACCENT};
+                border: 1px solid {BORDER};
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 13px;
+            }}
+            QPushButton:hover {{ background: {BORDER}; }}
+        """)
         self._toggle_btn.clicked.connect(self._toggle_mode)
         vl.addWidget(self._toggle_btn)
 
-        outer.addWidget(card, alignment=Qt.AlignmentFlag.AlignCenter)
+        outer.addWidget(self._card, alignment=Qt.AlignmentFlag.AlignCenter)
 
+    # ── Helpers ───────────────────────────────────────────────────
     def _toggle_eye(self):
-        if self._password.echoMode() == QLineEdit.EchoMode.Password:
-            self._password.setEchoMode(QLineEdit.EchoMode.Normal)
-            self._eye_btn.setText("🙈")
-        else:
-            self._password.setEchoMode(QLineEdit.EchoMode.Password)
-            self._eye_btn.setText("👁")
+        hidden = self._password.echoMode() == QLineEdit.EchoMode.Password
+        mode = QLineEdit.EchoMode.Normal if hidden else QLineEdit.EchoMode.Password
+        self._password.setEchoMode(mode)
+        self._eye_btn.setText("🙈" if hidden else "👁")
+
+    def _set_status(self, msg: str, ok: bool = False):
+        color = SUCCESS if ok else DANGER
+        self._status.setStyleSheet(
+            f"color:{color}; background:transparent; font-size:12px;")
+        self._status.setText(msg)
 
     def _toggle_mode(self):
-        if self._mode == "login":
-            self._mode = "register"
+        going_to_register = (self._mode == "login")
+        self._mode = "register" if going_to_register else "login"
+
+        # Show/hide register-only fields
+        for w in (self._email, self._confirm_pw, self._pw_hint):
+            w.setVisible(going_to_register)
+
+        if going_to_register:
             self._title.setText("Create your vault")
-            self._subtitle.setText("All your passwords, secured in one place")
-            self._email.setVisible(True)
+            self._subtitle.setText(
+                "Your data is encrypted on your device — we never see your passwords")
             self._submit_btn.setText("Create Account")
             self._toggle_btn.setText("Already have an account? Sign in")
+            self._card.setFixedWidth(440)
         else:
-            self._mode = "login"
             self._title.setText("Welcome back")
-            self._subtitle.setText("Sign in to your vault")
-            self._email.setVisible(False)
+            self._subtitle.setText("Enter your master password to unlock your vault")
             self._submit_btn.setText("Sign In")
-            self._toggle_btn.setText("Don't have an account? Create one")
-        self._status.setText("")
+            self._toggle_btn.setText("Create a new account")
 
+        self._status.setText("")
+        self._password.clear()
+        self._confirm_pw.clear()
+        self._username.setFocus()
+
+    # ── Submit ────────────────────────────────────────────────────
     def _submit(self):
         username = self._username.text().strip()
         password = self._password.text()
-        self._status.setText("")
+        self._set_status("")
 
         if not username or not password:
-            self._status.setText("Please fill in all required fields.")
+            self._set_status("Please fill in all required fields.")
             return
 
         self._submit_btn.setEnabled(False)
         self._submit_btn.setText("Please wait…")
 
-        if self._mode == "register":
-            email = self._email.text().strip() or None
-            ok, msg, uid = AuthController.register(username, password, email)
-            if ok:
-                self._status.setStyleSheet(f"color: {SUCCESS}; background: transparent; font-size: 12px;")
-                self._status.setText("Account created! Sign in now.")
-                self._toggle_mode()
+        try:
+            if self._mode == "register":
+                self._do_register(username, password)
             else:
-                self._status.setStyleSheet(f"color: {DANGER}; background: transparent; font-size: 12px;")
-                self._status.setText(msg)
-        else:
-            ok, msg, session = AuthController.login(username, password)
-            if ok:
-                self.authenticated.emit(session["user_id"], session["session_token"], password)
-            else:
-                self._status.setStyleSheet(f"color: {DANGER}; background: transparent; font-size: 12px;")
-                self._status.setText(msg)
+                self._do_login(username, password)
+        finally:
+            label = "Sign In" if self._mode == "login" else "Create Account"
+            self._submit_btn.setText(label)
+            self._submit_btn.setEnabled(True)
 
-        self._submit_btn.setEnabled(True)
-        self._submit_btn.setText("Sign In" if self._mode == "login" else "Create Account")
+    def _do_register(self, username: str, password: str):
+        email   = self._email.text().strip()
+        confirm = self._confirm_pw.text()
+
+        if not email:
+            self._set_status("Email is required — we use it for security alerts.")
+            return
+
+        if password != confirm:
+            self._set_status("Passwords don't match. Please try again.")
+            return
+
+        ok, msg, uid = AuthController.register(username, password, email)
+        if ok:
+            self._set_status(
+                "✅  Account created! Check your inbox for a welcome email, then sign in.",
+                ok=True)
+            # Switch to login after short delay
+            QTimer.singleShot(2000, self._toggle_mode)
+        else:
+            self._set_status(msg)
+
+    def _do_login(self, username: str, password: str):
+        ok, msg, session = AuthController.login(username, password)
+        if ok:
+            self.authenticated.emit(
+                session["user_id"], session["session_token"], password)
+        else:
+            self._set_status(msg)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1238,17 +1325,27 @@ class MainWindow(QMainWindow):
         self._stack.setCurrentWidget(auth)
 
     def _on_auth(self, user_id: str, session_token: str, master_password: str):
+        # Unlock the local extension API so the browser extension can connect
+        extension_api.state.unlock(user_id, master_password)
+        extension_api.state._on_focus = self._bring_to_front
+
         vault = VaultScreen(user_id, session_token, master_password)
         vault.logout_requested.connect(self._on_logout)
         self._stack.addWidget(vault)
         self._stack.setCurrentWidget(vault)
 
     def _on_logout(self):
-        # Remove vault screen and go back to auth
+        extension_api.state.lock()
         vault = self._stack.currentWidget()
         self._stack.removeWidget(vault)
         vault.deleteLater()
         self._init_auth()
+
+    def _bring_to_front(self):
+        """Bring the window to the foreground (called by extension API)."""
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1260,6 +1357,10 @@ def main():
     app.setApplicationName("PPW")
     app.setStyle("Fusion")
     app.setStyleSheet(APP_STYLE)
+
+    # Start local API for the browser extension (localhost:27227)
+    extension_api.start()
+    app.aboutToQuit.connect(extension_api.stop)
 
     # Override palette for full dark mode
     palette = QPalette()
