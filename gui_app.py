@@ -578,32 +578,54 @@ class AccountDialog(QDialog):
         self._email_f  = field("account email")
         self._url      = field("https://example.com")
 
-        pw_row = QHBoxLayout()
+        # ── Password row ──────────────────────────────────────────
+        pw_row = QHBoxLayout(); pw_row.setSpacing(6)
         self._pw = QLineEdit()
-        self._pw.setPlaceholderText("password")
+        self._pw.setPlaceholderText("Enter or generate a password")
         self._pw.setEchoMode(QLineEdit.EchoMode.Password)
         self._pw.setFixedHeight(40)
         self._pw.textChanged.connect(self._update_strength)
         pw_row.addWidget(self._pw)
 
         eye = QPushButton("👁"); eye.setFixedSize(40, 40)
-        eye.setStyleSheet(f"background:{SURFACE2};border:1px solid {BORDER};border-radius:8px;")
+        eye.setToolTip("Show / hide password")
+        eye.setStyleSheet(f"background:{SURFACE2};border:1px solid {BORDER};border-radius:8px;font-size:14px;")
         eye.clicked.connect(lambda: self._pw.setEchoMode(
             QLineEdit.EchoMode.Normal if self._pw.echoMode() == QLineEdit.EchoMode.Password
             else QLineEdit.EchoMode.Password))
         pw_row.addWidget(eye)
 
-        gen_btn = QPushButton("Generate")
-        gen_btn.setFixedHeight(40)
-        gen_btn.clicked.connect(self._generate)
-        pw_row.addWidget(gen_btn)
+        copy_pw_btn = QPushButton("📋"); copy_pw_btn.setFixedSize(40, 40)
+        copy_pw_btn.setToolTip("Copy password")
+        copy_pw_btn.setStyleSheet(f"background:{SURFACE2};border:1px solid {BORDER};border-radius:8px;font-size:14px;")
+        copy_pw_btn.clicked.connect(lambda: copy_to_clipboard(self._pw.text()) if self._pw.text() else None)
+        pw_row.addWidget(copy_pw_btn)
 
+        # ── Generate button — prominent, full-width below the row ─
+        gen_btn = QPushButton("⚡  Auto-generate strong password")
+        gen_btn.setFixedHeight(38)
+        gen_btn.setToolTip("Generate a cryptographically random 20-character password")
+        gen_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {ACCENT}22;
+                color: {ACCENT};
+                border: 1px solid {ACCENT}66;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 12px;
+            }}
+            QPushButton:hover {{ background: {ACCENT}44; }}
+        """)
+        gen_btn.clicked.connect(self._generate)
+
+        # Strength feedback
         self._strength_bar   = StrengthBar()
-        self._strength_label = QLabel("")
+        self._strength_label = QLabel("Type a password or click Auto-generate")
         self._strength_label.setStyleSheet(f"color:{TEXT_MUTED}; font-size:11px;")
 
         self._category = QComboBox()
-        self._category.addItems(["Other","Email","Social Media","Banking","Shopping","Entertainment","Work","Education"])
+        self._category.addItems(["Other","Email","Social Media","Banking","Shopping",
+                                  "Entertainment","Work","Education"])
         self._category.setFixedHeight(40)
 
         self._notes = QTextEdit()
@@ -616,6 +638,7 @@ class AccountDialog(QDialog):
         form.addRow("Username",   self._username)
         form.addRow("Email",      self._email_f)
         form.addRow("Password *", pw_row)
+        form.addRow("",           gen_btn)
         form.addRow("",           self._strength_bar)
         form.addRow("",           self._strength_label)
         form.addRow("URL",        self._url)
@@ -637,17 +660,25 @@ class AccountDialog(QDialog):
             res = AccountController.analyze_password_strength(pw)
             score = res.get("score", 0)
             self._strength_bar.set_score(score)
-            self._strength_label.setText(f"{strength_label(score)} — {score}/100")
+            fb = res.get("feedback", "")
+            self._strength_label.setText(f"{strength_label(score)} — {score}/100  {('· ' + fb) if fb and fb != strength_label(score) else ''}")
             self._strength_label.setStyleSheet(f"color:{strength_color(score)}; font-size:11px;")
         else:
             self._strength_bar.set_score(0)
-            self._strength_label.setText("")
+            self._strength_label.setText("Type a password or click Auto-generate")
+            self._strength_label.setStyleSheet(f"color:{TEXT_MUTED}; font-size:11px;")
 
     def _generate(self):
         res = AccountController.generate_strong_password(length=20)
-        if res.get("password"):
-            self._pw.setText(res["password"])
+        pw = res.get("password", "")
+        if pw:
             self._pw.setEchoMode(QLineEdit.EchoMode.Normal)
+            self._pw.setText(pw)
+            # Auto-copy so it's immediately available
+            copy_to_clipboard(pw)
+            self._strength_label.setText(
+                f"{strength_label(res.get('strength_score',0))} — {res.get('strength_score',0)}/100  · Copied to clipboard ✓")
+            self._strength_label.setStyleSheet(f"color:{SUCCESS}; font-size:11px;")
 
     def _populate(self):
         a = self._account
@@ -1127,17 +1158,35 @@ class VaultScreen(QWidget):
         card = QFrame(); card.setProperty("card","true")
         cl = QVBoxLayout(card); cl.setContentsMargins(24,24,24,24); cl.setSpacing(16)
 
-        # Output display
-        out_row = QHBoxLayout()
+        # ── Output row ────────────────────────────────────────────
+        out_row = QHBoxLayout(); out_row.setSpacing(8)
         self._gen_output = QLineEdit()
         self._gen_output.setReadOnly(True)
-        self._gen_output.setFixedHeight(48)
-        self._gen_output.setStyleSheet(f"font-family:monospace; font-size:16px; background:{SURFACE2}; border:1px solid {BORDER}; border-radius:8px; padding:0 14px; color:{TEXT};")
+        self._gen_output.setFixedHeight(52)
+        self._gen_output.setStyleSheet(
+            f"font-family:monospace; font-size:16px; letter-spacing:1px;"
+            f"background:{SURFACE2}; border:1px solid {BORDER}; border-radius:8px;"
+            f"padding:0 14px; color:{TEXT};")
         out_row.addWidget(self._gen_output)
-        copy_gen = QPushButton("📋 Copy"); copy_gen.setFixedHeight(48); copy_gen.setFixedWidth(90)
-        copy_gen.clicked.connect(lambda: copy_to_clipboard(self._gen_output.text()))
+
+        regen_btn = QPushButton("🔄")
+        regen_btn.setFixedSize(52, 52)
+        regen_btn.setToolTip("Generate a new password")
+        regen_btn.setStyleSheet(f"background:{SURFACE2};border:1px solid {BORDER};border-radius:8px;font-size:18px;")
+        regen_btn.clicked.connect(self._run_generator)
+        out_row.addWidget(regen_btn)
+
+        copy_gen = QPushButton("📋 Copy")
+        copy_gen.setFixedHeight(52); copy_gen.setFixedWidth(100)
+        copy_gen.setToolTip("Copy to clipboard")
+        copy_gen.clicked.connect(self._copy_generated)
         out_row.addWidget(copy_gen)
         cl.addLayout(out_row)
+
+        # Copied confirmation label
+        self._gen_copied_lbl = QLabel("")
+        self._gen_copied_lbl.setStyleSheet(f"color:{SUCCESS}; font-size:11px;")
+        cl.addWidget(self._gen_copied_lbl)
 
         self._gen_bar = StrengthBar(); self._gen_bar.setFixedHeight(8)
         self._gen_score_lbl = QLabel("")
@@ -1147,21 +1196,36 @@ class VaultScreen(QWidget):
 
         cl.addWidget(Divider())
 
-        # Options
+        # ── Options ───────────────────────────────────────────────
         opts = QFormLayout(); opts.setSpacing(12)
 
-        self._gen_length = QLineEdit("20"); self._gen_length.setFixedHeight(38); self._gen_length.setFixedWidth(80)
-        opts.addRow("Length:", self._gen_length)
+        # Length with slider
+        len_row = QHBoxLayout()
+        self._gen_length_lbl = QLabel("20")
+        self._gen_length_lbl.setFixedWidth(28)
+        self._gen_length_lbl.setStyleSheet(f"color:{ACCENT}; font-weight:700;")
+        from PyQt6.QtWidgets import QSlider
+        from PyQt6.QtCore import Qt as _Qt
+        self._gen_slider = QSlider(_Qt.Orientation.Horizontal)
+        self._gen_slider.setMinimum(8); self._gen_slider.setMaximum(64)
+        self._gen_slider.setValue(20)
+        self._gen_slider.setStyleSheet(f"accent-color:{ACCENT};")
+        self._gen_slider.valueChanged.connect(lambda v: (
+            self._gen_length_lbl.setText(str(v)), self._run_generator()))
+        len_row.addWidget(self._gen_length_lbl)
+        len_row.addWidget(self._gen_slider)
+        opts.addRow("Length:", len_row)
 
-        self._gen_upper  = QCheckBox("Uppercase  (A–Z)");     self._gen_upper.setChecked(True)
-        self._gen_lower  = QCheckBox("Lowercase  (a–z)");     self._gen_lower.setChecked(True)
-        self._gen_digits = QCheckBox("Digits  (0–9)");        self._gen_digits.setChecked(True)
-        self._gen_syms   = QCheckBox("Symbols  (!@#$…)");     self._gen_syms.setChecked(True)
+        self._gen_upper  = QCheckBox("Uppercase  (A–Z)");  self._gen_upper.setChecked(True)
+        self._gen_lower  = QCheckBox("Lowercase  (a–z)");  self._gen_lower.setChecked(True)
+        self._gen_digits = QCheckBox("Digits  (0–9)");     self._gen_digits.setChecked(True)
+        self._gen_syms   = QCheckBox("Symbols  (!@#$…)");  self._gen_syms.setChecked(True)
         for cb in (self._gen_upper, self._gen_lower, self._gen_digits, self._gen_syms):
+            cb.stateChanged.connect(lambda _: self._run_generator())
             opts.addRow("", cb)
         cl.addLayout(opts)
 
-        gen_btn = QPushButton("⚡  Generate Password"); gen_btn.setFixedHeight(44)
+        gen_btn = QPushButton("⚡  Generate New Password"); gen_btn.setFixedHeight(46)
         gen_btn.clicked.connect(self._run_generator)
         cl.addWidget(gen_btn)
 
@@ -1172,12 +1236,7 @@ class VaultScreen(QWidget):
         return w
 
     def _run_generator(self):
-        try:
-            length = int(self._gen_length.text() or 20)
-            length = max(8, min(128, length))
-        except ValueError:
-            length = 20
-
+        length = self._gen_slider.value()
         res = AccountController.generate_strong_password(
             length=length,
             use_uppercase=self._gen_upper.isChecked(),
@@ -1185,12 +1244,20 @@ class VaultScreen(QWidget):
             use_digits=self._gen_digits.isChecked(),
             use_symbols=self._gen_syms.isChecked(),
         )
-        pw = res.get("password","")
+        pw    = res.get("password", "")
         score = res.get("strength_score", 0)
         self._gen_output.setText(pw)
         self._gen_bar.set_score(score)
         self._gen_score_lbl.setText(f"{strength_label(score)} — {score}/100")
         self._gen_score_lbl.setStyleSheet(f"color:{strength_color(score)}; font-size:12px;")
+        self._gen_copied_lbl.setText("")
+
+    def _copy_generated(self):
+        pw = self._gen_output.text()
+        if pw:
+            copy_to_clipboard(pw)
+            self._gen_copied_lbl.setText("✓  Copied to clipboard!")
+            QTimer.singleShot(2500, lambda: self._gen_copied_lbl.setText(""))
 
     def _logout(self):
         AuthController.logout(self._session_token, self._user_id)

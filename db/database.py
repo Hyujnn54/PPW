@@ -12,8 +12,10 @@ from config import (
 )
 from db.schemas import INDEXES
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
+# Keep db logger at INFO so connection success/failure is still visible
+logger.setLevel(logging.INFO)
 
 
 class DatabaseManager:

@@ -23,6 +23,7 @@ from typing import Optional, Callable
 from controllers.account_controller import AccountController
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 PORT = 27227
 BIND = "127.0.0.1"      # localhost only — never expose to the network
@@ -186,6 +187,7 @@ def stop():
         _server.shutdown()
         _server = None
         logger.info("Extension API stopped")
+
 
 
 
