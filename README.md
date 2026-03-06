@@ -4,6 +4,11 @@
 
 [![Version](https://img.shields.io/badge/version-1.0.0-6c63ff.svg)](https://github.com/Hyujnn54/PPW/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.9%2B-3776ab.svg)](https://python.org)
+[![Platform](https://img.shields.io/badge/platform-Windows-0078d4.svg)](https://github.com/Hyujnn54/PPW/releases)
+[![Database](https://img.shields.io/badge/database-MongoDB-47a248.svg)](https://mongodb.com)
+[![Encryption](https://img.shields.io/badge/encryption-AES--256--GCM-brightgreen.svg)](#the-encryption-behind-it)
+[![Browser Extension](https://img.shields.io/badge/browser-Chrome%20%7C%20Firefox%20%7C%20Edge-ff7f00.svg)](#browser-extension)
 
 ---
 
@@ -147,5 +152,8 @@ It lets you fill in login forms from your browser without copying and pasting. I
 
 [MIT](LICENSE) — free to use and share.
 
+---
 
+## Tags
 
+`password-manager` `security` `encryption` `AES-256-GCM` `python` `windows` `mongodb` `browser-extension` `vault` `cloud-sync`
